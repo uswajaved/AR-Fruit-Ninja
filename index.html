@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -69,20 +68,13 @@
             background: #000;
         }
 
-        /*
-            This is the ONLY global dark overlay.
-
-            It is enabled only for:
-            Screen 1
-            Screen 7
-        */
         #cameraOverlay {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.30);
             z-index: 1;
             pointer-events: none;
             display: none;
+            background: rgba(0, 0, 0, 0.30);
         }
 
         #cameraOverlay.visible {
@@ -98,12 +90,7 @@
             inset: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
-
-            /*
-                Mouse events are handled on window,
-                so the canvas does NOT need pointer events.
-            */
+            z-index: 5;
             pointer-events: none;
             background: transparent;
         }
@@ -115,21 +102,12 @@
         .screen {
             position: absolute;
             inset: 0;
-
             display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-
             z-index: 10;
-
-            /*
-                IMPORTANT:
-                Default screen background is transparent,
-                therefore camera remains visible.
-            */
             background: transparent;
-
             text-align: center;
         }
 
@@ -137,12 +115,23 @@
             display: flex;
         }
 
-        /*
-            Difficulty screen is the ONLY fully black screen.
-        */
+        /* Screen 2 is completely black */
         #screen2 {
+            z-index: 30;
             background: #000;
-            z-index: 20;
+        }
+
+        /* Screen 1 and score screen only */
+        #screen1,
+        #screen7 {
+            z-index: 10;
+        }
+
+        /* Game-over and countdown screens show the camera */
+        #screen4,
+        #screen5,
+        #screen6 {
+            background: transparent;
         }
 
         h1,
@@ -426,6 +415,55 @@
             margin: 20px 0;
             text-shadow: 4px 4px 5px rgba(0,0,0,.6);
         }
+
+        /* =====================================================
+           KABOOM EFFECT
+        ===================================================== */
+
+        #kaboomEffect {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            z-index: 50;
+            display: none;
+            transform: translate(-50%, -50%) scale(.4) rotate(-8deg);
+            color: #ffdf45;
+            font-family: 'Gang of Three', cursive;
+            font-size: clamp(4rem, 14vw, 10rem);
+            line-height: 1;
+            text-shadow:
+                5px 5px 0 #9b160d,
+                -3px -3px 0 #ff6b18,
+                0 0 25px rgba(255, 80, 0, .95);
+            pointer-events: none;
+        }
+
+        #kaboomEffect.show {
+            display: block;
+            animation: kaboomAnimation .75s ease-out forwards;
+        }
+
+        @keyframes kaboomAnimation {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(.35) rotate(-12deg);
+            }
+
+            25% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.15) rotate(5deg);
+            }
+
+            70% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1) rotate(-3deg);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.3) rotate(0);
+            }
+        }
     </style>
 </head>
 
@@ -446,6 +484,9 @@
 
     <!-- GAME -->
     <canvas id="gameCanvas"></canvas>
+
+    <!-- KABOOM EFFECT -->
+    <div id="kaboomEffect">KABOOM!</div>
 
     <!-- HUD -->
     <div id="hud" class="hud">
@@ -682,6 +723,9 @@ const overlay =
 const hud =
     document.getElementById('hud');
 
+const kaboomEffect =
+    document.getElementById('kaboomEffect');
+
 
 /* ============================================================
    GAME STATE
@@ -887,7 +931,6 @@ function goToScreen(screenNumber) {
 
         });
 
-
     const nextScreen =
         document.getElementById(
             `screen${screenNumber}`
@@ -914,18 +957,14 @@ function goToScreen(screenNumber) {
         EVERYTHING ELSE = none
     */
 
-    if (
+    const shouldShowOverlay =
         screenNumber === 1 ||
-        screenNumber === 7
-    ) {
+        screenNumber === 7;
 
-        overlay.classList.add('visible');
-
-    } else {
-
-        overlay.classList.remove('visible');
-
-    }
+    overlay.classList.toggle(
+        'visible',
+        shouldShowOverlay
+    );
 
 
     /*
@@ -933,14 +972,22 @@ function goToScreen(screenNumber) {
         Gameplay has no .screen element.
     */
 
-    if (screenNumber === 3) {
+    hud.classList.toggle(
+        'active',
+        screenNumber === 3
+    );
 
-        hud.classList.add('active');
 
-    } else {
-
-        hud.classList.remove('active');
-
+    /*
+        Clear game graphics on non-game screens.
+    */
+    if (screenNumber !== 3) {
+        ctx.clearRect(
+            0,
+            0,
+            gameWidth(),
+            gameHeight()
+        );
     }
 
 }
@@ -1060,7 +1107,6 @@ function startGame() {
     */
 
     stopGameTimers();
-
 
     score = 0;
 
@@ -1241,93 +1287,110 @@ function spawnFruit() {
 
 
 /* ============================================================
-   MOUSE SLICING
+   MOUSE / TOUCH SLICING
 ============================================================ */
 
-/*
-    IMPORTANT FIX:
-
-    Your original canvas had:
-
-        pointer-events: none
-
-    but mousemove was attached TO THE CANVAS.
-
-    Therefore mousemove never fired.
-
-    We listen on WINDOW instead.
-*/
-
-
-let mouseDown = false;
-
+let pointerIsDown = false;
+let lastPointerPoint = null;
 
 window.addEventListener(
     'pointerdown',
     event => {
-
-        /*
-            Don't treat button clicks as slices.
-        */
-
-        if (
-            event.target.closest(
-                'button'
-            )
-        ) {
-
-            return;
-
-        }
-
-
-        mouseDown = true;
-
-
-        if (gameRunning) {
-
-            addSlicePoint(
-                event.clientX,
-                event.clientY
-            );
-
-        }
-
-    }
-);
-
-
-window.addEventListener(
-    'pointerup',
-    () => {
-
-        mouseDown = false;
-
-    }
-);
-
-
-window.addEventListener(
-    'pointermove',
-    event => {
-
         if (!gameRunning) return;
 
+        if (event.target.closest('button')) {
+            return;
+        }
 
-        /*
-            For testing:
-            mouse slices while moving.
+        pointerIsDown = true;
 
-            You don't need to hold click.
-        */
+        lastPointerPoint = {
+            x: event.clientX,
+            y: event.clientY
+        };
 
         addSlicePoint(
             event.clientX,
             event.clientY
         );
-
-    }
+    },
+    { passive: true }
 );
+
+window.addEventListener(
+    'pointermove',
+    event => {
+        if (!gameRunning || !pointerIsDown) {
+            return;
+        }
+
+        const currentPoint = {
+            x: event.clientX,
+            y: event.clientY
+        };
+
+        addSliceSegment(
+            lastPointerPoint,
+            currentPoint
+        );
+
+        lastPointerPoint = currentPoint;
+    },
+    { passive: true }
+);
+
+window.addEventListener(
+    'pointerup',
+    stopPointerSlice,
+    { passive: true }
+);
+
+window.addEventListener(
+    'pointercancel',
+    stopPointerSlice,
+    { passive: true }
+);
+
+window.addEventListener(
+    'pointerleave',
+    stopPointerSlice,
+    { passive: true }
+);
+
+function stopPointerSlice() {
+    pointerIsDown = false;
+    lastPointerPoint = null;
+}
+
+function addSliceSegment(start, end) {
+    if (!start || !end) return;
+
+    const distance = Math.hypot(
+        end.x - start.x,
+        end.y - start.y
+    );
+
+    const steps = Math.max(
+        1,
+        Math.ceil(distance / 12)
+    );
+
+    for (let i = 1; i <= steps; i++) {
+        const progress = i / steps;
+
+        const x =
+            start.x +
+            (end.x - start.x) *
+            progress;
+
+        const y =
+            start.y +
+            (end.y - start.y) *
+            progress;
+
+        addSlicePoint(x, y);
+    }
+}
 
 
 /* ============================================================
@@ -1393,7 +1456,6 @@ function checkSlice(x, y) {
         const dy =
             fruit.y - y;
 
-
         const distance =
             Math.sqrt(
                 dx * dx +
@@ -1419,7 +1481,6 @@ function sliceFruit(fruit) {
 
     if (fruit.sliced) return;
 
-
     fruit.sliced = true;
 
 
@@ -1428,11 +1489,13 @@ function sliceFruit(fruit) {
     */
 
     if (fruit.isBomb) {
+        showKaboom();
 
-        gameOver();
+        setTimeout(() => {
+            gameOver();
+        }, 650);
 
         return;
-
     }
 
 
@@ -1633,10 +1696,41 @@ async function setupMediaPipe() {
    HAND RESULTS
 ============================================================ */
 
+function handPointToScreen(landmark) {
+    const screenWidth = gameWidth();
+    const screenHeight = gameHeight();
+
+    const videoWidth = video.videoWidth || 1280;
+    const videoHeight = video.videoHeight || 720;
+
+    const scale = Math.max(
+        screenWidth / videoWidth,
+        screenHeight / videoHeight
+    );
+
+    const renderedWidth = videoWidth * scale;
+    const renderedHeight = videoHeight * scale;
+
+    const cropX =
+        (renderedWidth - screenWidth) / 2;
+
+    const cropY =
+        (renderedHeight - screenHeight) / 2;
+
+    /*
+       The CSS video is mirrored, so flip X.
+    */
+    const mirroredX = 1 - landmark.x;
+
+    return {
+        x: mirroredX * renderedWidth - cropX,
+        y: landmark.y * renderedHeight - cropY
+    };
+}
+
 function onHandsResults(results) {
 
     if (!gameRunning) return;
-
 
     if (
         !results.multiHandLandmarks ||
@@ -1661,23 +1755,14 @@ function onHandsResults(results) {
         hand[8];
 
 
-    /*
-        Camera image is mirrored with CSS.
-
-        Therefore X needs to be flipped.
-    */
-
-    const x =
-        (1 - indexTip.x) *
-        gameWidth();
+    const point =
+        handPointToScreen(indexTip);
 
 
-    const y =
-        indexTip.y *
-        gameHeight();
-
-
-    addSlicePoint(x, y);
+    addSlicePoint(
+        point.x,
+        point.y
+    );
 
 }
 
@@ -2172,13 +2257,33 @@ function drawRotatedImage(
 
 
 /* ============================================================
+   KABOOM EFFECT
+============================================================ */
+
+function showKaboom() {
+    kaboomEffect.classList.remove('show');
+
+    /*
+       Force the browser to restart the animation
+       if the effect is triggered again.
+    */
+    void kaboomEffect.offsetWidth;
+
+    kaboomEffect.classList.add('show');
+
+    setTimeout(() => {
+        kaboomEffect.classList.remove('show');
+    }, 800);
+}
+
+
+/* ============================================================
    GAME OVER
 ============================================================ */
 
 function gameOver() {
 
     if (!gameRunning) return;
-
 
     gameRunning =
         false;
@@ -2361,4 +2466,3 @@ function stopGameTimers() {
 
 </body>
 </html>
-```
