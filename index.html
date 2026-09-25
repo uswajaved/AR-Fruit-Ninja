@@ -1,21 +1,22 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AR Fruit Ninja</title>
+
     <style>
-        /* --- FONTS --- */
         @font-face {
             font-family: 'Gang of Three';
-            src: url('assets/GangofThree.ttf') format('truetype'); 
-        }
-        @font-face {
-            font-family: 'Royal Avenue Demo';
-            src: url('assets/RoyalAvenueDemo.ttf') format('truetype'); 
+            src: url('assets/GangofThree.ttf') format('truetype');
         }
 
-        /* --- CSS VARIABLES (YOUR COLORS) --- */
+        @font-face {
+            font-family: 'Royal Avenue Demo';
+            src: url('assets/RoyalAvenueDemo.ttf') format('truetype');
+        }
+
         :root {
             --main-grad-1: #FFD478;
             --main-grad-2: #F3B734;
@@ -26,415 +27,2338 @@
             --go-color-2: #9CA411;
             --over-color-1: #F86D5B;
             --over-color-2: #E24D39;
-            --bg-dark: #1a1a1a;
         }
 
-        /* --- GLOBAL STYLES --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        html,
         body {
-            background-color: #000; /* Black background to blend with camera */
-            font-family: 'Royal Avenue Demo', sans-serif;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
+            background: #000;
             color: white;
+            font-family: 'Royal Avenue Demo', sans-serif;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+        }
+
+        /* =====================================================
+           CAMERA
+        ===================================================== */
+
+        #webcam {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            z-index: 0;
+            background: #000;
+        }
+
+        /*
+            This is the ONLY global dark overlay.
+
+            It is enabled only for:
+            Screen 1
+            Screen 7
+        */
+        #cameraOverlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.30);
+            z-index: 1;
+            pointer-events: none;
+            display: none;
+        }
+
+        #cameraOverlay.visible {
+            display: block;
+        }
+
+        /* =====================================================
+           GAME CANVAS
+        ===================================================== */
+
+        #gameCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+
+            /*
+                Mouse events are handled on window,
+                so the canvas does NOT need pointer events.
+            */
+            pointer-events: none;
+            background: transparent;
+        }
+
+        /* =====================================================
+           SCREENS
+        ===================================================== */
+
+        .screen {
+            position: absolute;
+            inset: 0;
+
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            z-index: 10;
+
+            /*
+                IMPORTANT:
+                Default screen background is transparent,
+                therefore camera remains visible.
+            */
+            background: transparent;
+
             text-align: center;
         }
-        #gameContainer { position: relative; width: 100vw; height: 100vh; }
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; background: transparent; }
-        .active { display: flex; }
-        
-        /* --- BUTTONS & TEXT --- */
-        h1, h2, h3 { font-family: 'Gang of Three', cursive; }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /*
+            Difficulty screen is the ONLY fully black screen.
+        */
+        #screen2 {
+            background: #000;
+            z-index: 20;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Gang of Three', cursive;
+        }
+
         .main-title {
-            font-size: 5rem;
-            background: linear-gradient(to bottom, var(--main-grad-1), var(--main-grad-2));
+            font-size: clamp(3rem, 7vw, 5rem);
+            background: linear-gradient(
+                to bottom,
+                var(--main-grad-1),
+                var(--main-grad-2)
+            );
+
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+
             margin-bottom: 20px;
-            text-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+
+            filter: drop-shadow(4px 4px 0 rgba(0,0,0,.45));
         }
+
+        /* =====================================================
+           BUTTONS
+        ===================================================== */
+
         .btn {
             padding: 15px 40px;
             font-family: 'Gang of Three', cursive;
             font-size: 1.5rem;
+
             border: 3px solid var(--easy-color);
             color: var(--easy-color);
-            background: rgba(0,0,0,0.7);
+
+            background: rgba(0,0,0,.7);
+
             cursor: pointer;
-            transition: all 0.3s;
+
+            transition:
+                background .2s ease,
+                color .2s ease,
+                transform .2s ease;
+
             margin-top: 20px;
         }
-        .btn:hover { background: var(--easy-color); color: black; }
-        .btn-play { border-color: var(--main-grad-2); color: var(--main-grad-2); }
-        .btn-play:hover { background: var(--main-grad-2); color: black; }
 
-        /* --- SCREEN 1 (START) --- */
-        #screen1 img { width: 150px; height: 150px; margin-bottom: 20px; }
-        #screen1 p { font-size: 1.2rem; margin-top: 15px; color: #ccc; text-shadow: 2px 2px 0px #000; }
+        .btn:hover {
+            background: var(--easy-color);
+            color: black;
+            transform: scale(1.03);
+        }
 
-        /* --- SCREEN 2 (DIFFICULTY) - FULLY BLACK --- */
-        #screen2 { background-color: #000; z-index: 11; }
-        #screen2 { flex-direction: column; }
-        .difficulty-cards { display: flex; gap: 30px; margin-top: 40px; }
+        .btn-play {
+            border-color: var(--main-grad-2);
+            color: var(--main-grad-2);
+        }
+
+        .btn-play:hover {
+            background: var(--main-grad-2);
+            color: black;
+        }
+
+        /* =====================================================
+           START SCREEN
+        ===================================================== */
+
+        #screen1 img {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            margin-bottom: 20px;
+        }
+
+        #screen1 p {
+            font-size: 1.2rem;
+            margin-top: 15px;
+            color: #eee;
+            text-shadow: 2px 2px 3px #000;
+        }
+
+        /* =====================================================
+           DIFFICULTY
+        ===================================================== */
+
+        .difficulty-cards {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
         .diff-card {
-            background: rgba(0,0,0,0.5);
             border: 2px solid #333;
             padding: 20px;
             border-radius: 15px;
             width: 300px;
             text-align: left;
+            background: #080808;
         }
-        .diff-card.easy { border-color: var(--easy-color); }
-        .diff-card.medium { border-color: var(--medium-color); }
-        .diff-card.hard { border-color: var(--hard-color); }
-        .diff-card img { width: 80px; height: 80px; display: block; margin: 0 auto 10px; }
-        .diff-card h3 { font-size: 1.8rem; margin-bottom: 10px; }
-        .diff-card ul { list-style: none; margin-bottom: 20px; font-size: 1.1rem; }
-        .diff-btn { width: 100%; padding: 10px; font-size: 1.2rem; }
-        .diff-btn.inactive { border-color: var(--easy-color); color: var(--easy-color); background: transparent; }
-        .diff-btn.hover { background: var(--easy-color); color: black; }
-        
-        /* --- CAMERA & CANVAS (NO OVERLAY) --- */
-        #webcam { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; transform: scaleX(-1); z-index: 0; background: #000; }
-        #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; background: transparent; }
-        
-        /* --- HUD (OVERLAY ONLY ON SCREEN 3) --- */
-        .hud { position: absolute; top: 30px; left: 0; width: 100%; display: none; justify-content: space-between; padding: 0 40px; z-index: 5; pointer-events: none; }
-        .hud.active { display: flex; }
-        
-        .hud-left { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.4); padding: 10px 20px; border-radius: 10px; }
-        .hud-icon { width: 40px; height: 40px; }
-        .hud-text-block { display: flex; flex-direction: column; line-height: 1.1; text-align: left; }
-        .hud-score { font-family: 'Gang of Three'; font-size: 2rem; color: var(--main-grad-2); }
-        .hud-best { font-family: 'Royal Avenue Demo'; font-size: 1.2rem; color: #fff; }
 
-        /* Top Right Lives - Ascending in size */
-        .hud-right { display: flex; align-items: flex-end; gap: 10px; }
-        .life-icon { transition: all 0.3s; }
-        .life-icon:nth-child(1) { width: 30px; height: 30px; }
-        .life-icon:nth-child(2) { width: 40px; height: 40px; }
-        .life-icon:nth-child(3) { width: 50px; height: 50px; }
+        .diff-card.easy {
+            border-color: var(--easy-color);
+        }
 
-        /* --- OTHER SCREENS --- */
-        #screen4 h1, #screen5 h1, #screen6 h1 { font-size: 8rem; text-shadow: 4px 4px 0px rgba(0,0,0,0.8); }
-        #screen4 h1 { color: var(--main-grad-1); }
-        #screen5 h1 { background: linear-gradient(to bottom, var(--go-color-1), var(--go-color-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #screen6 h1 { background: linear-gradient(to bottom, var(--over-color-1), var(--over-color-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #screen7 .score-display { font-family: 'Gang of Three'; font-size: 6rem; color: var(--main-grad-2); margin: 20px 0; text-shadow: 4px 4px 0px rgba(0,0,0,0.5); }
+        .diff-card.medium {
+            border-color: var(--medium-color);
+        }
 
-        .hidden { display: none !important; }
+        .diff-card.hard {
+            border-color: var(--hard-color);
+        }
+
+        .diff-card img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 15px;
+        }
+
+        .diff-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .diff-card ul {
+            list-style: none;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+
+        .diff-btn {
+            width: 100%;
+            padding: 10px;
+            font-size: 1.2rem;
+        }
+
+        .diff-btn.inactive {
+            background: transparent;
+        }
+
+        .diff-btn.selected {
+            background: var(--easy-color);
+            color: black;
+        }
+
+        /* =====================================================
+           HUD
+        ===================================================== */
+
+        .hud {
+            position: absolute;
+            top: 30px;
+            left: 0;
+
+            width: 100%;
+
+            display: none;
+            justify-content: space-between;
+            align-items: flex-start;
+
+            padding: 0 40px;
+
+            z-index: 6;
+
+            pointer-events: none;
+        }
+
+        .hud.active {
+            display: flex;
+        }
+
+        .hud-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+
+            background: rgba(0,0,0,.4);
+
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        .hud-icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .hud-text-block {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+            text-align: left;
+        }
+
+        .hud-score {
+            font-family: 'Gang of Three';
+            font-size: 2rem;
+            color: var(--main-grad-2);
+        }
+
+        .hud-best {
+            font-size: 1.2rem;
+        }
+
+        .hud-right {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .life-icon {
+            object-fit: contain;
+        }
+
+        .life-icon:nth-child(1) {
+            width: 30px;
+            height: 30px;
+        }
+
+        .life-icon:nth-child(2) {
+            width: 40px;
+            height: 40px;
+        }
+
+        .life-icon:nth-child(3) {
+            width: 50px;
+            height: 50px;
+        }
+
+        /* =====================================================
+           READY / GO / GAME OVER
+        ===================================================== */
+
+        #screen4 h1,
+        #screen5 h1,
+        #screen6 h1 {
+            font-size: clamp(5rem, 12vw, 8rem);
+            text-shadow: 4px 4px 8px rgba(0,0,0,.8);
+        }
+
+        #screen4 h1 {
+            color: var(--main-grad-1);
+        }
+
+        #screen5 h1 {
+            background: linear-gradient(
+                to bottom,
+                var(--go-color-1),
+                var(--go-color-2)
+            );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #screen6 h1 {
+            background: linear-gradient(
+                to bottom,
+                var(--over-color-1),
+                var(--over-color-2)
+            );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* =====================================================
+           SCORE
+        ===================================================== */
+
+        #screen7 .score-display {
+            font-family: 'Gang of Three';
+            font-size: 6rem;
+            color: var(--main-grad-2);
+            margin: 20px 0;
+            text-shadow: 4px 4px 5px rgba(0,0,0,.6);
+        }
     </style>
 </head>
+
 <body>
-    <div id="gameContainer">
-        <!-- Fully visible camera feed -->
-        <video id="webcam" autoplay playsinline></video>
-        <!-- Canvas only draws fruits and slices -->
-        <canvas id="gameCanvas"></canvas>
 
-        <!-- HUD Overlay (Only shows on Screen 3) -->
-        <div id="hud" class="hud">
-            <div class="hud-left">
-                <img id="levelIcon" src="assets/Chevron.png" class="hud-icon" alt="Level Icon">
-                <div class="hud-text-block">
-                    <span class="hud-score" id="scoreValue">0</span>
-                    <span class="hud-best">Best Score: <span id="bestScore">0</span></span>
-                </div>
-            </div>
-            <div class="hud-right" id="livesContainer">
-                <img src="assets/Life.png" class="life-icon">
-                <img src="assets/Life.png" class="life-icon">
-                <img src="assets/Life.png" class="life-icon">
-            </div>
-        </div>
+<div id="gameContainer">
 
-        <!-- Screen 1 (Camera shows through) -->
-        <div id="screen1" class="screen active">
-            <img src="assets/Logo.png" alt="Fruit Ninja Logo">
-            <h1 class="main-title">FRUIT NINJA</h1>
-            <button class="btn btn-play" onclick="goToScreen(2)">TAP TO PLAY</button>
-            <p>WAVE YOUR HAND TO SLICE OR USE MOUSE TO SLICE</p>
-        </div>
+    <!-- LIVE CAMERA -->
+    <video
+        id="webcam"
+        autoplay
+        muted
+        playsinline>
+    </video>
 
-        <!-- Screen 2 (Fully Black) -->
-        <div id="screen2" class="screen">
-            <h1 class="main-title">CHOOSE YOUR DIFFICULTY</h1>
-            <div class="difficulty-cards">
-                <div class="diff-card easy">
-                    <img src="assets/Orange.png" alt="Orange">
-                    <h3>EASY Slice & Chill</h3>
-                    <ul><li>- Slow fruits</li><li>- No life loss on miss</li></ul>
-                    <button class="btn diff-btn inactive" data-level="easy" onclick="selectDifficulty('easy', this)">TAP TO SELECT</button>
-                </div>
-                <div class="diff-card medium">
-                    <img src="assets/Pear.png" alt="Pear">
-                    <h3>MEDIUM True Ninja</h3>
-                    <ul><li>- Normal speed</li><li>- Occasional bombs</li></ul>
-                    <button class="btn diff-btn inactive" data-level="medium" onclick="selectDifficulty('medium', this)">TAP TO SELECT</button>
-                </div>
-                <div class="diff-card hard">
-                    <img src="assets/Bomb.png" alt="Bomb">
-                    <h3>HARD Slice & Chill</h3>
-                    <ul><li>- Fast fruits</li><li>- Many bombs</li></ul>
-                    <button class="btn diff-btn inactive" data-level="hard" onclick="selectDifficulty('hard', this)">TAP TO SELECT</button>
-                </div>
+    <!-- 30% overlay used ONLY for Screen 1 + Screen 7 -->
+    <div id="cameraOverlay"></div>
+
+    <!-- GAME -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hud">
+
+        <div class="hud-left">
+
+            <img
+                id="levelIcon"
+                src="assets/Chevron.png"
+                class="hud-icon"
+                alt="Level">
+
+            <div class="hud-text-block">
+
+                <span
+                    class="hud-score"
+                    id="scoreValue">
+                    0
+                </span>
+
+                <span class="hud-best">
+                    Best Score:
+                    <span id="bestScore">0</span>
+                </span>
+
             </div>
         </div>
 
-        <div id="screen4" class="screen"><h1>READY</h1></div>
-        <div id="screen5" class="screen"><h1>GO!</h1></div>
-        <div id="screen6" class="screen">
-            <h1>GAME OVER!</h1>
-            <button class="btn btn-play" onclick="restartGame()">PLAY AGAIN</button>
+        <div
+            class="hud-right"
+            id="livesContainer">
+
+            <img src="assets/Life.png" class="life-icon">
+            <img src="assets/Life.png" class="life-icon">
+            <img src="assets/Life.png" class="life-icon">
+
         </div>
-        <div id="screen7" class="screen">
-            <h1 class="main-title">SCORE</h1>
-            <div class="score-display" id="finalScore">143</div>
-            <button class="btn btn-play" onclick="restartGame()">PLAY AGAIN</button>
-        </div>
+
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <!-- ================= START ================= -->
 
-    <script>
-        // --- GAME STATE ---
-        let currentScreen = 1;
-        let selectedDifficulty = null;
-        let score = 0;
-        let lives = 3;
-        let gameRunning = false;
-        let bestScore = localStorage.getItem('fn_best_score') || 0;
-        document.getElementById('bestScore').innerText = bestScore;
+    <div
+        id="screen1"
+        class="screen active">
 
-        // --- ASSETS ---
-        const fruitTypes = ['Apple', 'Lemon', 'Banana', 'Orange', 'Pear'];
-        const assets = {
-            'Apple': { whole: 'assets/Apple.png', slice1: 'assets/Sliced Apple 1.png', slice2: 'assets/Sliced Apple 2.png', splash: 'assets/Apple Splash.png' },
-            'Lemon': { whole: 'assets/Lemon.png', slice1: 'assets/Sliced Lemon 1.png', slice2: 'assets/Sliced Lemon 2.png', splash: 'assets/Lemon Splash.png' },
-            'Banana': { whole: 'assets/Banana.png', slice1: 'assets/Sliced Banana 1.png', slice2: 'assets/Sliced Banana 2.png', splash: 'assets/Banana Splash.png' },
-            'Orange': { whole: 'assets/Orange.png', slice1: 'assets/Sliced Orange 1.png', slice2: 'assets/Sliced Orange 2.png', splash: 'assets/Orange Splash.png' },
-            'Pear': { whole: 'assets/Pear.png', slice1: 'assets/Sliced Pear 1.png', slice2: 'assets/Sliced Pear 2.png', splash: 'assets/Pear Splash.png' },
-            'Bomb': { whole: 'assets/Bomb.png' }
-        };
+        <img
+            src="assets/Logo.png"
+            alt="Fruit Ninja">
 
-        // Load Cut Image
-        const cutImg = new Image();
-        cutImg.src = 'assets/Cut with hand.png';
+        <h1 class="main-title">
+            FRUIT NINJA
+        </h1>
 
-        // --- SCREEN MANAGEMENT ---
-        function goToScreen(screenNum) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            const screenEl = document.getElementById(`screen${screenNum}`);
-            if (screenEl) screenEl.classList.add('active');
-            
-            currentScreen = screenNum;
-            
-            // Only show HUD overlay on Screen 3
-            if (screenNum === 3) {
-                document.getElementById('hud').classList.add('active');
-                startGame();
-            } else {
-                document.getElementById('hud').classList.remove('active');
-            }
-        }
+        <button
+            class="btn btn-play"
+            onclick="goToScreen(2)">
+            TAP TO PLAY
+        </button>
 
-        function selectDifficulty(level, btn) {
-            selectedDifficulty = level;
-            document.querySelectorAll('.diff-btn').forEach(b => { b.textContent = "TAP TO SELECT"; b.classList.remove('hover'); b.classList.add('inactive'); });
-            btn.textContent = "TAP TO PLAY"; btn.classList.remove('inactive'); btn.classList.add('hover');
-            
-            const levelIcon = document.getElementById('levelIcon');
-            if (level === 'easy') levelIcon.src = 'assets/Orange.png';
-            else if (level === 'medium') levelIcon.src = 'assets/Pear.png';
-            else if (level === 'hard') levelIcon.src = 'assets/Bomb.png';
+        <p>
+            WAVE YOUR HAND TO SLICE OR USE MOUSE TO SLICE
+        </p>
 
-            setTimeout(() => {
-                goToScreen(4);
-                setTimeout(() => { goToScreen(5); setTimeout(() => { goToScreen(3); }, 1000); }, 1000);
-            }, 800);
-        }
+    </div>
 
-        function restartGame() {
-            score = 0; lives = 3;
-            document.getElementById('scoreValue').innerText = score;
-            document.getElementById('livesContainer').innerHTML = '<img src="assets/Life.png" class="life-icon"><img src="assets/Life.png" class="life-icon"><img src="assets/Life.png" class="life-icon">';
-            goToScreen(2);
-        }
+    <!-- ================= DIFFICULTY ================= -->
 
-        // --- GAME CANVAS LOGIC ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const video = document.getElementById('webcam');
-        
-        let fruits = [];
-        let splashes = []; // Array to hold splashes for 4 seconds
-        let nextFruits = []; // Holds newly split halves
-        let sliceTrail = [];
+    <div
+        id="screen2"
+        class="screen">
 
-        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        <h1 class="main-title">
+            CHOOSE YOUR DIFFICULTY
+        </h1>
 
-        canvas.addEventListener('mousemove', (e) => {
-            if (gameRunning) { sliceTrail.push({x: e.clientX, y: e.clientY, life: 20}); checkSlice(e.clientX, e.clientY); }
+        <div class="difficulty-cards">
+
+            <div class="diff-card easy">
+
+                <img
+                    src="assets/Orange.png"
+                    alt="Orange">
+
+                <h3>
+                    EASY Slice & Chill
+                </h3>
+
+                <ul>
+                    <li>– Slow fruits</li>
+                    <li>– No life loss on miss</li>
+                </ul>
+
+                <button
+                    class="btn diff-btn inactive"
+                    onclick="selectDifficulty('easy', this)">
+                    TAP TO SELECT
+                </button>
+
+            </div>
+
+            <div class="diff-card medium">
+
+                <img
+                    src="assets/Pear.png"
+                    alt="Pear">
+
+                <h3>
+                    MEDIUM True Ninja
+                </h3>
+
+                <ul>
+                    <li>– Normal speed</li>
+                    <li>– Occasional bombs</li>
+                </ul>
+
+                <button
+                    class="btn diff-btn inactive"
+                    onclick="selectDifficulty('medium', this)">
+                    TAP TO SELECT
+                </button>
+
+            </div>
+
+            <div class="diff-card hard">
+
+                <img
+                    src="assets/Bomb.png"
+                    alt="Bomb">
+
+                <h3>
+                    HARD Slice & Chill
+                </h3>
+
+                <ul>
+                    <li>– Fast fruits</li>
+                    <li>– Many bombs</li>
+                </ul>
+
+                <button
+                    class="btn diff-btn inactive"
+                    onclick="selectDifficulty('hard', this)">
+                    TAP TO SELECT
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ================= READY ================= -->
+
+    <div
+        id="screen4"
+        class="screen">
+
+        <h1>READY</h1>
+
+    </div>
+
+    <!-- ================= GO ================= -->
+
+    <div
+        id="screen5"
+        class="screen">
+
+        <h1>GO!</h1>
+
+    </div>
+
+    <!-- ================= GAME OVER ================= -->
+
+    <div
+        id="screen6"
+        class="screen">
+
+        <h1>GAME OVER!</h1>
+
+        <button
+            class="btn btn-play"
+            onclick="showScoreScreen()">
+            VIEW SCORE
+        </button>
+
+    </div>
+
+    <!-- ================= SCORE ================= -->
+
+    <div
+        id="screen7"
+        class="screen">
+
+        <h1 class="main-title">
+            SCORE
+        </h1>
+
+        <div
+            class="score-display"
+            id="finalScore">
+            0
+        </div>
+
+        <button
+            class="btn btn-play"
+            onclick="restartGame()">
+            PLAY AGAIN
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- MEDIAPIPE -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+
+<script>
+
+/* ============================================================
+   DOM
+============================================================ */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const video = document.getElementById('webcam');
+
+const overlay =
+    document.getElementById('cameraOverlay');
+
+const hud =
+    document.getElementById('hud');
+
+
+/* ============================================================
+   GAME STATE
+============================================================ */
+
+let currentScreen = 1;
+
+let selectedDifficulty = null;
+
+let score = 0;
+
+let lives = 3;
+
+let gameRunning = false;
+
+let gameAnimationId = null;
+
+let spawnTimer = null;
+
+let bestScore =
+    Number(localStorage.getItem('fn_best_score')) || 0;
+
+document.getElementById('bestScore').textContent =
+    bestScore;
+
+
+/* ============================================================
+   ASSETS
+============================================================ */
+
+const fruitTypes = [
+    'Apple',
+    'Lemon',
+    'Banana',
+    'Orange',
+    'Pear'
+];
+
+
+const assets = {
+
+    Apple: {
+        whole: 'assets/Apple.png',
+        slice1: 'assets/Sliced Apple 1.png',
+        slice2: 'assets/Sliced Apple 2.png',
+        splash: 'assets/Apple Splash.png'
+    },
+
+    Lemon: {
+        whole: 'assets/Lemon.png',
+        slice1: 'assets/Sliced Lemon 1.png',
+        slice2: 'assets/Sliced Lemon 2.png',
+        splash: 'assets/Lemon Splash.png'
+    },
+
+    Banana: {
+        whole: 'assets/Banana.png',
+        slice1: 'assets/Sliced Banana 1.png',
+        slice2: 'assets/Sliced Banana 2.png',
+        splash: 'assets/Banana Splash.png'
+    },
+
+    Orange: {
+        whole: 'assets/Orange.png',
+        slice1: 'assets/Sliced Orange 1.png',
+        slice2: 'assets/Sliced Orange 2.png',
+        splash: 'assets/Orange Splash.png'
+    },
+
+    Pear: {
+        whole: 'assets/Pear.png',
+        slice1: 'assets/Sliced Pear 1.png',
+        slice2: 'assets/Sliced Pear 2.png',
+        splash: 'assets/Pear Splash.png'
+    },
+
+    Bomb: {
+        whole: 'assets/Bomb.png'
+    }
+
+};
+
+
+/* ============================================================
+   IMAGE CACHE
+============================================================ */
+
+const imageCache = {};
+
+function getImage(src) {
+
+    if (!imageCache[src]) {
+
+        const image = new Image();
+
+        image.src = src;
+
+        imageCache[src] = image;
+
+    }
+
+    return imageCache[src];
+
+}
+
+
+/* preload */
+
+Object.values(assets).forEach(asset => {
+
+    Object.values(asset).forEach(src => {
+
+        getImage(src);
+
+    });
+
+});
+
+
+const cutImg =
+    getImage('assets/Cut with hand.png');
+
+
+/* ============================================================
+   GAME ARRAYS
+============================================================ */
+
+let fruits = [];
+
+let halves = [];
+
+let splashes = [];
+
+let sliceTrail = [];
+
+
+/* ============================================================
+   CANVAS
+============================================================ */
+
+function resizeCanvas() {
+
+    const dpr =
+        Math.min(window.devicePixelRatio || 1, 2);
+
+    canvas.width =
+        window.innerWidth * dpr;
+
+    canvas.height =
+        window.innerHeight * dpr;
+
+    canvas.style.width =
+        window.innerWidth + 'px';
+
+    canvas.style.height =
+        window.innerHeight + 'px';
+
+    /*
+        Everything else uses CSS pixels.
+    */
+
+    ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+    );
+
+}
+
+
+window.addEventListener(
+    'resize',
+    resizeCanvas
+);
+
+resizeCanvas();
+
+
+function gameWidth() {
+    return window.innerWidth;
+}
+
+
+function gameHeight() {
+    return window.innerHeight;
+}
+
+
+/* ============================================================
+   SCREEN MANAGEMENT
+============================================================ */
+
+function goToScreen(screenNumber) {
+
+    document
+        .querySelectorAll('.screen')
+        .forEach(screen => {
+
+            screen.classList.remove('active');
+
         });
 
-        // MediaPipe Setup
-        let hands;
-        try {
-            hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-            hands.onResults(onHandsResults);
-        } catch (e) { console.error("MediaPipe Hands failed", e); }
 
-        function onHandsResults(results) {
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                let indexTip = results.multiHandLandmarks[0][8];
-                let x = (1 - indexTip.x) * canvas.width; // Mirror X
-                let y = indexTip.y * canvas.height;
-                sliceTrail.push({x, y, life: 20});
-                if (gameRunning) checkSlice(x, y);
-            }
-        }
+    const nextScreen =
+        document.getElementById(
+            `screen${screenNumber}`
+        );
 
-        try {
-            const camera = new Camera(video, { onFrame: async () => { if (hands) await hands.send({image: video}); }, width: 1280, height: 720 });
-            camera.start();
-        } catch (e) { console.error("Camera failed", e); }
 
-        function startGame() {
-            gameRunning = true;
-            fruits = []; splashes = []; nextFruits = [];
+    if (nextScreen) {
+
+        nextScreen.classList.add('active');
+
+    }
+
+
+    currentScreen =
+        screenNumber;
+
+
+    /*
+        OVERLAY RULE
+
+        Screen 1 = 30%
+        Screen 7 = 30%
+
+        EVERYTHING ELSE = none
+    */
+
+    if (
+        screenNumber === 1 ||
+        screenNumber === 7
+    ) {
+
+        overlay.classList.add('visible');
+
+    } else {
+
+        overlay.classList.remove('visible');
+
+    }
+
+
+    /*
+        HUD only during gameplay.
+        Gameplay has no .screen element.
+    */
+
+    if (screenNumber === 3) {
+
+        hud.classList.add('active');
+
+    } else {
+
+        hud.classList.remove('active');
+
+    }
+
+}
+
+
+/* Set correct overlay on initial load */
+
+goToScreen(1);
+
+
+/* ============================================================
+   DIFFICULTY
+============================================================ */
+
+function selectDifficulty(level, button) {
+
+    selectedDifficulty = level;
+
+
+    document
+        .querySelectorAll('.diff-btn')
+        .forEach(btn => {
+
+            btn.textContent =
+                'TAP TO SELECT';
+
+            btn.classList.remove(
+                'selected'
+            );
+
+        });
+
+
+    button.textContent =
+        'TAP TO PLAY';
+
+    button.classList.add(
+        'selected'
+    );
+
+
+    const levelIcon =
+        document.getElementById(
+            'levelIcon'
+        );
+
+
+    if (level === 'easy') {
+
+        levelIcon.src =
+            'assets/Orange.png';
+
+    }
+
+    else if (level === 'medium') {
+
+        levelIcon.src =
+            'assets/Pear.png';
+
+    }
+
+    else {
+
+        levelIcon.src =
+            'assets/Bomb.png';
+
+    }
+
+
+    /*
+        Small selection delay.
+    */
+
+    setTimeout(() => {
+
+        startCountdown();
+
+    }, 400);
+
+}
+
+
+/* ============================================================
+   COUNTDOWN
+============================================================ */
+
+function startCountdown() {
+
+    goToScreen(4);
+
+
+    setTimeout(() => {
+
+        goToScreen(5);
+
+
+        setTimeout(() => {
+
+            startGame();
+
+        }, 900);
+
+
+    }, 1000);
+
+}
+
+
+/* ============================================================
+   START GAME
+============================================================ */
+
+function startGame() {
+
+    /*
+        Stop any previous game first.
+    */
+
+    stopGameTimers();
+
+
+    score = 0;
+
+    lives = 3;
+
+    fruits = [];
+
+    halves = [];
+
+    splashes = [];
+
+    sliceTrail = [];
+
+
+    document.getElementById(
+        'scoreValue'
+    ).textContent = score;
+
+
+    updateLives();
+
+
+    gameRunning = true;
+
+
+    goToScreen(3);
+
+
+    scheduleNextFruit();
+
+
+    gameLoop();
+
+}
+
+
+/* ============================================================
+   SPAWNING
+============================================================ */
+
+function scheduleNextFruit() {
+
+    if (!gameRunning) return;
+
+
+    let delay = 1800;
+
+
+    if (selectedDifficulty === 'medium') {
+
+        delay = 1200;
+
+    }
+
+
+    if (selectedDifficulty === 'hard') {
+
+        delay = 750;
+
+    }
+
+
+    spawnTimer =
+        setTimeout(() => {
+
             spawnFruit();
-            gameLoop();
+
+            scheduleNextFruit();
+
+        }, delay);
+
+}
+
+
+function spawnFruit() {
+
+    if (!gameRunning) return;
+
+
+    let bombChance = 0;
+
+
+    if (selectedDifficulty === 'medium') {
+
+        bombChance = 0.15;
+
+    }
+
+
+    if (selectedDifficulty === 'hard') {
+
+        bombChance = 0.30;
+
+    }
+
+
+    const isBomb =
+        Math.random() < bombChance;
+
+
+    const fruitName =
+        fruitTypes[
+            Math.floor(
+                Math.random() *
+                fruitTypes.length
+            )
+        ];
+
+
+    /*
+        Difficulty affects velocity.
+    */
+
+    let upwardSpeed = 16;
+
+
+    if (selectedDifficulty === 'easy') {
+
+        upwardSpeed = 14;
+
+    }
+
+
+    if (selectedDifficulty === 'hard') {
+
+        upwardSpeed = 19;
+
+    }
+
+
+    const source =
+        isBomb
+            ? assets.Bomb.whole
+            : assets[fruitName].whole;
+
+
+    fruits.push({
+
+        name: fruitName,
+
+        isBomb,
+
+        img: getImage(source),
+
+        x:
+            120 +
+            Math.random() *
+            Math.max(
+                1,
+                gameWidth() - 240
+            ),
+
+        y:
+            gameHeight() + 80,
+
+        vx:
+            (Math.random() - .5) * 5,
+
+        vy:
+            -upwardSpeed -
+            Math.random() * 4,
+
+        rotation:
+            Math.random() *
+            Math.PI * 2,
+
+        rotationSpeed:
+            (Math.random() - .5) *
+            .08,
+
+        radius: 55,
+
+        sliced: false
+
+    });
+
+}
+
+
+/* ============================================================
+   MOUSE SLICING
+============================================================ */
+
+/*
+    IMPORTANT FIX:
+
+    Your original canvas had:
+
+        pointer-events: none
+
+    but mousemove was attached TO THE CANVAS.
+
+    Therefore mousemove never fired.
+
+    We listen on WINDOW instead.
+*/
+
+
+let mouseDown = false;
+
+
+window.addEventListener(
+    'pointerdown',
+    event => {
+
+        /*
+            Don't treat button clicks as slices.
+        */
+
+        if (
+            event.target.closest(
+                'button'
+            )
+        ) {
+
+            return;
+
         }
 
-        function spawnFruit() {
-            if (!gameRunning) return;
-            let isBomb = false;
-            let fruitName = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
-            if (selectedDifficulty === 'medium' && Math.random() < 0.2) isBomb = true;
-            if (selectedDifficulty === 'hard' && Math.random() < 0.4) isBomb = true;
-            
-            let img = new Image(); img.src = isBomb ? assets['Bomb'].whole : assets[fruitName].whole;
-            let fruit = {
-                img: img, x: Math.random() * (canvas.width - 200) + 100, y: canvas.height + 100,
-                vx: (Math.random() - 0.5) * 4, vy: -15 - Math.random() * 5,
-                isBomb: isBomb, name: fruitName, sliced: false, isHalf: false,
-                splash: new Image(), slice1: new Image(), slice2: new Image(), rot: 0, rotSpeed: 0
-            };
-            if (!isBomb) {
-                fruit.splash.src = assets[fruitName].splash;
-                fruit.slice1.src = assets[fruitName].slice1;
-                fruit.slice2.src = assets[fruitName].slice2;
-            }
-            fruits.push(fruit);
-            
-            let spawnTime = 2000;
-            if (selectedDifficulty === 'medium') spawnTime = 1200;
-            if (selectedDifficulty === 'hard') spawnTime = 800;
-            setTimeout(spawnFruit, spawnTime);
+
+        mouseDown = true;
+
+
+        if (gameRunning) {
+
+            addSlicePoint(
+                event.clientX,
+                event.clientY
+            );
+
         }
 
-        function checkSlice(x, y) {
-            fruits.forEach(f => {
-                if (!f.sliced && Math.hypot(f.x - x, f.y - y) < 80) {
-                    f.sliced = true;
-                    if (f.isBomb) { gameOver(); } 
-                    else {
-                        score += 10;
-                        document.getElementById('scoreValue').innerText = score;
-                    }
-                }
+    }
+);
+
+
+window.addEventListener(
+    'pointerup',
+    () => {
+
+        mouseDown = false;
+
+    }
+);
+
+
+window.addEventListener(
+    'pointermove',
+    event => {
+
+        if (!gameRunning) return;
+
+
+        /*
+            For testing:
+            mouse slices while moving.
+
+            You don't need to hold click.
+        */
+
+        addSlicePoint(
+            event.clientX,
+            event.clientY
+        );
+
+    }
+);
+
+
+/* ============================================================
+   UNIVERSAL SLICE INPUT
+
+   BOTH mouse and MediaPipe call this.
+============================================================ */
+
+function addSlicePoint(x, y) {
+
+    if (!gameRunning) return;
+
+
+    sliceTrail.push({
+
+        x,
+
+        y,
+
+        life: 16
+
+    });
+
+
+    /*
+        Limit trail size so it can't
+        grow indefinitely.
+    */
+
+    if (sliceTrail.length > 35) {
+
+        sliceTrail.shift();
+
+    }
+
+
+    checkSlice(x, y);
+
+}
+
+
+/* ============================================================
+   COLLISION
+============================================================ */
+
+function checkSlice(x, y) {
+
+    if (!gameRunning) return;
+
+
+    for (const fruit of fruits) {
+
+        if (fruit.sliced) {
+
+            continue;
+
+        }
+
+
+        const dx =
+            fruit.x - x;
+
+        const dy =
+            fruit.y - y;
+
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        if (
+            distance <=
+            fruit.radius + 25
+        ) {
+
+            sliceFruit(fruit);
+
+        }
+
+    }
+
+}
+
+
+function sliceFruit(fruit) {
+
+    if (fruit.sliced) return;
+
+
+    fruit.sliced = true;
+
+
+    /*
+        BOMB
+    */
+
+    if (fruit.isBomb) {
+
+        gameOver();
+
+        return;
+
+    }
+
+
+    /*
+        SCORE
+    */
+
+    score += 10;
+
+
+    document.getElementById(
+        'scoreValue'
+    ).textContent =
+        score;
+
+
+    /*
+        SPLASH
+    */
+
+    splashes.push({
+
+        img:
+            getImage(
+                assets[
+                    fruit.name
+                ].splash
+            ),
+
+        x:
+            fruit.x,
+
+        y:
+            fruit.y,
+
+        life:
+            90,
+
+        maxLife:
+            90
+
+    });
+
+
+    /*
+        HALF 1
+    */
+
+    halves.push({
+
+        img:
+            getImage(
+                assets[
+                    fruit.name
+                ].slice1
+            ),
+
+        x:
+            fruit.x - 10,
+
+        y:
+            fruit.y,
+
+        vx:
+            fruit.vx - 3,
+
+        vy:
+            fruit.vy - 1,
+
+        rotation:
+            fruit.rotation,
+
+        rotationSpeed:
+            -.12
+
+    });
+
+
+    /*
+        HALF 2
+    */
+
+    halves.push({
+
+        img:
+            getImage(
+                assets[
+                    fruit.name
+                ].slice2
+            ),
+
+        x:
+            fruit.x + 10,
+
+        y:
+            fruit.y,
+
+        vx:
+            fruit.vx + 3,
+
+        vy:
+            fruit.vy - 1,
+
+        rotation:
+            fruit.rotation,
+
+        rotationSpeed:
+            .12
+
+    });
+
+}
+
+
+/* ============================================================
+   MEDIAPIPE
+============================================================ */
+
+let hands = null;
+
+let camera = null;
+
+
+async function setupMediaPipe() {
+
+    try {
+
+        hands =
+            new Hands({
+
+                locateFile:
+                    file =>
+                    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+
             });
-        }
 
-        function gameOver() {
-            gameRunning = false;
-            if (score > bestScore) {
-                bestScore = score;
-                localStorage.setItem('fn_best_score', bestScore);
-                document.getElementById('bestScore').innerText = bestScore;
-            }
-            document.getElementById('finalScore').innerText = score;
-            setTimeout(() => goToScreen(6), 500);
-        }
 
-        function gameLoop() {
-            if (!gameRunning) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 1. Handle Whole Fruits & Splitting
-            fruits = fruits.filter(f => {
-                f.x += f.vx; f.y += f.vy; f.vy += 0.2; f.rot += f.rotSpeed;
-                
-                // If it just got sliced, split it!
-                if (f.sliced && !f.isBomb && !f.isHalf) {
-                    splashes.push({ img: f.splash, x: f.x, y: f.y, life: 240 }); // 240 frames = 4 seconds at 60fps
-                    // Spawn two halves flying in opposite directions
-                    nextFruits.push({ img: f.slice1, x: f.x, y: f.y, vx: f.vx - 3, vy: f.vy - 2, rot: 0, rotSpeed: -0.15, sliced: true, isHalf: true, isBomb: false });
-                    nextFruits.push({ img: f.slice2, x: f.x, y: f.y, vx: f.vx + 3, vy: f.vy - 2, rot: 0, rotSpeed: 0.15, sliced: true, isHalf: true, isBomb: false });
-                    return false; // Remove original whole fruit
-                }
-                
-                // Draw Fruit (Consistent 100x100 size)
-                if (!f.sliced) {
-                    ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot);
-                    ctx.drawImage(f.img, -50, -50, 100, 100);
-                    ctx.restore();
-                }
-                
-                // Off screen check
-                if (f.y > canvas.height + 200) {
-                    if (!f.isBomb && !f.sliced && !f.isHalf && selectedDifficulty !== 'easy') {
-                        lives--;
-                        let livesContainer = document.getElementById('livesContainer');
-                        if (livesContainer.children.length > 0) livesContainer.removeChild(livesContainer.lastChild);
-                        if (lives <= 0) gameOver();
-                    }
+        hands.setOptions({
+
+            maxNumHands: 1,
+
+            modelComplexity: 1,
+
+            minDetectionConfidence:
+                .55,
+
+            minTrackingConfidence:
+                .55
+
+        });
+
+
+        hands.onResults(
+            onHandsResults
+        );
+
+
+        camera =
+            new Camera(video, {
+
+                onFrame:
+                    async () => {
+
+                        if (hands) {
+
+                            await hands.send({
+                                image: video
+                            });
+
+                        }
+
+                    },
+
+                width: 1280,
+
+                height: 720
+
+            });
+
+
+        await camera.start();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            'Camera / MediaPipe error:',
+            error
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   HAND RESULTS
+============================================================ */
+
+function onHandsResults(results) {
+
+    if (!gameRunning) return;
+
+
+    if (
+        !results.multiHandLandmarks ||
+        results.multiHandLandmarks.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    const hand =
+        results.multiHandLandmarks[0];
+
+
+    /*
+        Landmark 8:
+        index fingertip
+    */
+
+    const indexTip =
+        hand[8];
+
+
+    /*
+        Camera image is mirrored with CSS.
+
+        Therefore X needs to be flipped.
+    */
+
+    const x =
+        (1 - indexTip.x) *
+        gameWidth();
+
+
+    const y =
+        indexTip.y *
+        gameHeight();
+
+
+    addSlicePoint(x, y);
+
+}
+
+
+setupMediaPipe();
+
+
+/* ============================================================
+   LIVES
+============================================================ */
+
+function updateLives() {
+
+    const container =
+        document.getElementById(
+            'livesContainer'
+        );
+
+
+    container.innerHTML = '';
+
+
+    for (
+        let i = 0;
+        i < lives;
+        i++
+    ) {
+
+        const img =
+            document.createElement(
+                'img'
+            );
+
+
+        img.src =
+            'assets/Life.png';
+
+        img.className =
+            'life-icon';
+
+
+        container.appendChild(
+            img
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   GAME LOOP
+============================================================ */
+
+function gameLoop() {
+
+    if (!gameRunning) return;
+
+
+    ctx.clearRect(
+        0,
+        0,
+        gameWidth(),
+        gameHeight()
+    );
+
+
+    updateWholeFruits();
+
+    updateHalves();
+
+    drawSplashes();
+
+    drawSliceTrail();
+
+
+    if (gameRunning) {
+
+        gameAnimationId =
+            requestAnimationFrame(
+                gameLoop
+            );
+
+    }
+
+}
+
+
+/* ============================================================
+   WHOLE FRUITS
+============================================================ */
+
+function updateWholeFruits() {
+
+    const gravity = .28;
+
+
+    fruits =
+        fruits.filter(
+            fruit => {
+
+
+                /*
+                    Sliced fruit already
+                    became halves.
+                */
+
+                if (fruit.sliced) {
+
                     return false;
+
                 }
+
+
+                fruit.x +=
+                    fruit.vx;
+
+                fruit.y +=
+                    fruit.vy;
+
+                fruit.vy +=
+                    gravity;
+
+                fruit.rotation +=
+                    fruit.rotationSpeed;
+
+
+                drawRotatedImage(
+
+                    fruit.img,
+
+                    fruit.x,
+
+                    fruit.y,
+
+                    110,
+
+                    110,
+
+                    fruit.rotation
+
+                );
+
+
+                /*
+                    Fruit fell below screen.
+                */
+
+                if (
+                    fruit.y >
+                    gameHeight() + 120
+                ) {
+
+
+                    if (
+                        !fruit.isBomb &&
+                        selectedDifficulty !==
+                        'easy'
+                    ) {
+
+                        lives--;
+
+                        updateLives();
+
+
+                        if (lives <= 0) {
+
+                            gameOver();
+
+                        }
+
+                    }
+
+
+                    return false;
+
+                }
+
+
                 return true;
-            });
-            
-            // Add newly split halves to the main array
-            if (nextFruits.length > 0) { fruits = fruits.concat(nextFruits); nextFruits = []; }
 
-            // 2. Draw Sliced Halves
-            fruits = fruits.filter(f => {
-                if (f.isHalf) {
-                    ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot);
-                    ctx.drawImage(f.img, -50, -50, 100, 100);
-                    ctx.restore();
-                    if (f.y > canvas.height + 200) return false;
-                    return true;
-                }
-                return true; // Keep whole fruits for next frame processing
-            });
+            }
+        );
 
-            // 3. Draw Splashes (Lasts 4 seconds)
-            splashes = splashes.filter(s => {
-                ctx.save(); ctx.translate(s.x, s.y);
-                ctx.drawImage(s.img, -50, -50, 100, 100);
+}
+
+
+/* ============================================================
+   FRUIT HALVES
+============================================================ */
+
+function updateHalves() {
+
+    const gravity = .32;
+
+
+    halves =
+        halves.filter(
+            half => {
+
+
+                half.x +=
+                    half.vx;
+
+                half.y +=
+                    half.vy;
+
+                half.vy +=
+                    gravity;
+
+                half.rotation +=
+                    half.rotationSpeed;
+
+
+                drawRotatedImage(
+
+                    half.img,
+
+                    half.x,
+
+                    half.y,
+
+                    100,
+
+                    100,
+
+                    half.rotation
+
+                );
+
+
+                return (
+                    half.y <
+                    gameHeight() + 150
+                );
+
+            }
+        );
+
+}
+
+
+/* ============================================================
+   SPLASH
+============================================================ */
+
+function drawSplashes() {
+
+    splashes =
+        splashes.filter(
+            splash => {
+
+
+                const alpha =
+                    splash.life /
+                    splash.maxLife;
+
+
+                ctx.save();
+
+
+                ctx.globalAlpha =
+                    Math.min(
+                        1,
+                        alpha * 2
+                    );
+
+
+                ctx.drawImage(
+
+                    splash.img,
+
+                    splash.x - 65,
+
+                    splash.y - 65,
+
+                    130,
+
+                    130
+
+                );
+
+
                 ctx.restore();
-                s.life--;
-                return s.life > 0;
-            });
 
-            // 4. Draw "Cut with hand" Trail
-            ctx.globalCompositeOperation = 'lighter'; // Glowing light effect
-            sliceTrail = sliceTrail.filter(p => p.life > 0);
-            sliceTrail.forEach(p => {
-                ctx.globalAlpha = (p.life / 20) * 0.8;
-                let size = 80;
-                ctx.drawImage(cutImg, p.x - size/2, p.y - size/2, size, size);
-                p.life -= 1;
-            });
-            ctx.globalAlpha = 1.0;
-            ctx.globalCompositeOperation = 'source-over';
-            
-            requestAnimationFrame(gameLoop);
+
+                splash.life--;
+
+
+                return (
+                    splash.life > 0
+                );
+
+            }
+        );
+
+}
+
+
+/* ============================================================
+   SLICE TRAIL
+============================================================ */
+
+function drawSliceTrail() {
+
+    if (
+        sliceTrail.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+        Draw connecting slash line.
+        This makes it obvious whether
+        mouse/hand tracking is working.
+    */
+
+    if (
+        sliceTrail.length > 1
+    ) {
+
+        ctx.save();
+
+        ctx.lineCap =
+            'round';
+
+        ctx.lineJoin =
+            'round';
+
+        ctx.strokeStyle =
+            'rgba(255,255,255,.85)';
+
+        ctx.shadowColor =
+            'rgba(255,210,90,.9)';
+
+        ctx.shadowBlur =
+            18;
+
+        ctx.lineWidth =
+            6;
+
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+
+            sliceTrail[0].x,
+
+            sliceTrail[0].y
+
+        );
+
+
+        for (
+            let i = 1;
+            i < sliceTrail.length;
+            i++
+        ) {
+
+            ctx.lineTo(
+
+                sliceTrail[i].x,
+
+                sliceTrail[i].y
+
+            );
+
         }
-    </script>
+
+
+        ctx.stroke();
+
+        ctx.restore();
+
+    }
+
+
+    /*
+        Your existing hand/cut image.
+    */
+
+    sliceTrail.forEach(
+        point => {
+
+
+            ctx.save();
+
+
+            ctx.globalAlpha =
+                point.life / 16;
+
+
+            if (
+                cutImg.complete &&
+                cutImg.naturalWidth > 0
+            ) {
+
+                ctx.drawImage(
+
+                    cutImg,
+
+                    point.x - 35,
+
+                    point.y - 35,
+
+                    70,
+
+                    70
+
+                );
+
+            }
+
+
+            ctx.restore();
+
+
+            point.life--;
+
+        }
+    );
+
+
+    sliceTrail =
+        sliceTrail.filter(
+            point =>
+                point.life > 0
+        );
+
+}
+
+
+/* ============================================================
+   DRAW IMAGE
+============================================================ */
+
+function drawRotatedImage(
+    image,
+    x,
+    y,
+    width,
+    height,
+    rotation
+) {
+
+    if (
+        !image.complete ||
+        image.naturalWidth === 0
+    ) {
+
+        return;
+
+    }
+
+
+    ctx.save();
+
+
+    ctx.translate(
+        x,
+        y
+    );
+
+
+    ctx.rotate(
+        rotation
+    );
+
+
+    ctx.drawImage(
+
+        image,
+
+        -width / 2,
+
+        -height / 2,
+
+        width,
+
+        height
+
+    );
+
+
+    ctx.restore();
+
+}
+
+
+/* ============================================================
+   GAME OVER
+============================================================ */
+
+function gameOver() {
+
+    if (!gameRunning) return;
+
+
+    gameRunning =
+        false;
+
+
+    stopGameTimers();
+
+
+    if (
+        score >
+        bestScore
+    ) {
+
+        bestScore =
+            score;
+
+
+        localStorage.setItem(
+            'fn_best_score',
+            bestScore
+        );
+
+
+        document.getElementById(
+            'bestScore'
+        ).textContent =
+            bestScore;
+
+    }
+
+
+    document.getElementById(
+        'finalScore'
+    ).textContent =
+        score;
+
+
+    /*
+        Clear game graphics.
+    */
+
+    ctx.clearRect(
+        0,
+        0,
+        gameWidth(),
+        gameHeight()
+    );
+
+
+    /*
+        GAME OVER:
+        live camera
+        NO overlay.
+    */
+
+    goToScreen(6);
+
+}
+
+
+/* ============================================================
+   SCORE SCREEN
+============================================================ */
+
+function showScoreScreen() {
+
+    document.getElementById(
+        'finalScore'
+    ).textContent =
+        score;
+
+
+    /*
+        Score screen automatically
+        gets 30% overlay.
+    */
+
+    goToScreen(7);
+
+}
+
+
+/* ============================================================
+   RESTART
+============================================================ */
+
+function restartGame() {
+
+    stopGameTimers();
+
+
+    score = 0;
+
+    lives = 3;
+
+    selectedDifficulty =
+        null;
+
+
+    fruits = [];
+
+    halves = [];
+
+    splashes = [];
+
+    sliceTrail = [];
+
+
+    ctx.clearRect(
+        0,
+        0,
+        gameWidth(),
+        gameHeight()
+    );
+
+
+    document.getElementById(
+        'scoreValue'
+    ).textContent =
+        '0';
+
+
+    updateLives();
+
+
+    document
+        .querySelectorAll(
+            '.diff-btn'
+        )
+        .forEach(
+            button => {
+
+                button.textContent =
+                    'TAP TO SELECT';
+
+                button.classList.remove(
+                    'selected'
+                );
+
+            }
+        );
+
+
+    goToScreen(2);
+
+}
+
+
+/* ============================================================
+   CLEANUP
+============================================================ */
+
+function stopGameTimers() {
+
+    if (spawnTimer) {
+
+        clearTimeout(
+            spawnTimer
+        );
+
+        spawnTimer = null;
+
+    }
+
+
+    if (gameAnimationId) {
+
+        cancelAnimationFrame(
+            gameAnimationId
+        );
+
+        gameAnimationId =
+            null;
+
+    }
+
+}
+
+</script>
+
 </body>
 </html>
+```
