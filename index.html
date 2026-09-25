@@ -68,6 +68,11 @@
             background: #000;
         }
 
+        /*
+            This overlay is shown ONLY for:
+            - Screen 1 (start)
+            - Screen 7 (score)
+        */
         #cameraOverlay {
             position: absolute;
             inset: 0;
@@ -115,7 +120,7 @@
             display: flex;
         }
 
-        /* Screen 2 is completely black */
+        /* Screen 2 is completely black (covers camera + overlay) */
         #screen2 {
             z-index: 30;
             background: #000;
@@ -1859,6 +1864,12 @@ function updateWholeFruits() {
 
     const gravity = .28;
 
+    /*
+        All fruits share the same fixed height.
+        Change this value to make all fruits larger/smaller.
+    */
+    const fruitHeight = 90;
+
 
     fruits =
         fruits.filter(
@@ -1890,20 +1901,16 @@ function updateWholeFruits() {
                     fruit.rotationSpeed;
 
 
-                drawRotatedImage(
-
+                /*
+                    Draw fruit with fixed height,
+                    width auto-scales to preserve aspect ratio.
+                */
+                drawImageFixedHeight(
                     fruit.img,
-
                     fruit.x,
-
                     fruit.y,
-
-                    110,
-
-                    110,
-
+                    fruitHeight,
                     fruit.rotation
-
                 );
 
 
@@ -1958,6 +1965,11 @@ function updateHalves() {
 
     const gravity = .32;
 
+    /*
+        Same fixed height for halves.
+    */
+    const halfHeight = 85;
+
 
     halves =
         halves.filter(
@@ -1977,20 +1989,16 @@ function updateHalves() {
                     half.rotationSpeed;
 
 
-                drawRotatedImage(
-
+                /*
+                    Draw halves with fixed height,
+                    width auto-scales to preserve aspect ratio.
+                */
+                drawImageFixedHeight(
                     half.img,
-
                     half.x,
-
                     half.y,
-
-                    100,
-
-                    100,
-
+                    halfHeight,
                     half.rotation
-
                 );
 
 
@@ -2010,6 +2018,8 @@ function updateHalves() {
 ============================================================ */
 
 function drawSplashes() {
+
+    const splashSize = 110;
 
     splashes =
         splashes.filter(
@@ -2035,13 +2045,13 @@ function drawSplashes() {
 
                     splash.img,
 
-                    splash.x - 65,
+                    splash.x - splashSize / 2,
 
-                    splash.y - 65,
+                    splash.y - splashSize / 2,
 
-                    130,
+                    splashSize,
 
-                    130
+                    splashSize
 
                 );
 
@@ -2200,7 +2210,57 @@ function drawSliceTrail() {
 
 
 /* ============================================================
-   DRAW IMAGE
+   DRAW IMAGE WITH FIXED HEIGHT (NO STRETCH)
+============================================================ */
+
+function drawImageFixedHeight(
+    image,
+    x,
+    y,
+    height,
+    rotation
+) {
+
+    if (
+        !image.complete ||
+        image.naturalWidth === 0
+    ) {
+
+        return;
+
+    }
+
+    /*
+        Compute width to preserve aspect ratio.
+    */
+    const aspect = image.naturalWidth / image.naturalHeight;
+    const width = height * aspect;
+
+    ctx.save();
+
+    ctx.translate(
+        x,
+        y
+    );
+
+    ctx.rotate(
+        rotation
+    );
+
+    ctx.drawImage(
+        image,
+        -width / 2,
+        -height / 2,
+        width,
+        height
+    );
+
+    ctx.restore();
+}
+
+
+/* ============================================================
+   OLD ROTATED DRAW (kept for reference, not used)
 ============================================================ */
 
 function drawRotatedImage(
