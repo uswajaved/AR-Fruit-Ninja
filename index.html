@@ -1673,6 +1673,19 @@ let mediaPipeReady = false;
 
 let lastHandSeenAt = 0;
 
+let handFrameInFlight = false;
+
+/*
+    Raw landmark coordinates jitter frame to frame even
+    when your hand is steady. smoothedHandPoint is an
+    exponential moving average of the fingertip position
+    that removes most of that shake without adding
+    noticeable input lag.
+*/
+let smoothedHandPoint = null;
+
+const HAND_SMOOTHING = 0.45;
+
 
 function setHandStatus(text, mode) {
 
@@ -1774,7 +1787,13 @@ async function setupMediaPipe() {
 
             maxNumHands: 1,
 
-            modelComplexity: 1,
+            /*
+                0 = lite model. Noticeably faster per-frame
+                inference than 1 (full model), which is what
+                was causing frames to back up and tracking to
+                lag behind your real hand position.
+            */
+            modelComplexity: 0,
 
             minDetectionConfidence:
                 .5,
@@ -1796,7 +1815,17 @@ async function setupMediaPipe() {
                 onFrame:
                     async () => {
 
-                        if (hands) {
+                        /*
+                            If the previous frame hasn't finished
+                            processing yet, skip this one instead
+                            of queueing it. Without this, a slower
+                            device falls behind and every hand
+                            position you see is stale — that's
+                            what reads as "slow" tracking.
+                        */
+                        if (hands && !handFrameInFlight) {
+
+                            handFrameInFlight = true;
 
                             try {
 
@@ -1811,15 +1840,19 @@ async function setupMediaPipe() {
                                     sendError
                                 );
 
+                            } finally {
+
+                                handFrameInFlight = false;
+
                             }
 
                         }
 
                     },
 
-                width: 1280,
+                width: 640,
 
-                height: 720
+                height: 480
 
             });
 
@@ -1905,6 +1938,8 @@ function checkHandTrackingHealth() {
             'warning'
         );
 
+        smoothedHandPoint = null;
+
     }
 
 
@@ -1988,13 +2023,38 @@ function onHandsResults(results) {
         hand[8];
 
 
-    const point =
+    const rawPoint =
         handPointToScreen(indexTip);
 
 
+    if (!smoothedHandPoint) {
+
+        /*
+            First detection (or first after the hand was
+            lost) — snap straight to the real position
+            instead of easing in from nothing.
+        */
+        smoothedHandPoint = {
+            x: rawPoint.x,
+            y: rawPoint.y
+        };
+
+    } else {
+
+        smoothedHandPoint.x +=
+            (rawPoint.x - smoothedHandPoint.x) *
+            HAND_SMOOTHING;
+
+        smoothedHandPoint.y +=
+            (rawPoint.y - smoothedHandPoint.y) *
+            HAND_SMOOTHING;
+
+    }
+
+
     addSlicePoint(
-        point.x,
-        point.y
+        smoothedHandPoint.x,
+        smoothedHandPoint.y
     );
 
 }
