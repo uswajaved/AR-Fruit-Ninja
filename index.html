@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Fruit Ninja</title>
+    <style>
+        /* --- FONTS --- */
+        @font-face {
+            font-family: 'Gang of Three';
+            src: url('assets/GangofThree.ttf') format('truetype'); 
+        }
+        @font-face {
+            font-family: 'Royal Avenue Demo';
+            src: url('assets/RoyalAvenueDemo.ttf') format('truetype'); 
+        }
+
+        /* --- CSS VARIABLES (YOUR COLORS) --- */
+        :root {
+            --main-grad-1: #FFD478;
+            --main-grad-2: #F3B734;
+            --easy-color: #F76F19;
+            --medium-color: #C8D039;
+            --hard-color: #98A0E0;
+            --go-color-1: #DCE44C;
+            --go-color-2: #9CA411;
+            --over-color-1: #F86D5B;
+            --over-color-2: #E24D39;
+            --bg-dark: #1a1a1a;
+        }
+
+        /* --- GLOBAL STYLES --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body {
+            background: linear-gradient(135deg, #2c2c2c, #111);
+            font-family: 'Royal Avenue Demo', sans-serif;
+            overflow: hidden;
+            color: white;
+            text-align: center;
+        }
+        #gameContainer { position: relative; width: 100vw; height: 100vh; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+        .active { display: flex; }
+        
+        /* --- BUTTONS & TEXT --- */
+        h1, h2, h3 { font-family: 'Gang of Three', cursive; }
+        .main-title {
+            font-size: 5rem;
+            background: linear-gradient(to bottom, var(--main-grad-1), var(--main-grad-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 15px 40px;
+            font-family: 'Gang of Three', cursive;
+            font-size: 1.5rem;
+            border: 3px solid var(--easy-color);
+            color: var(--easy-color);
+            background: rgba(0,0,0,0.7);
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        .btn:hover { background: var(--easy-color); color: black; }
+        .btn-play { border-color: var(--main-grad-2); color: var(--main-grad-2); }
+        .btn-play:hover { background: var(--main-grad-2); color: black; }
+
+        /* --- SCREEN 1 (START) --- */
+        #screen1 img { width: 150px; height: 150px; margin-bottom: 20px; }
+        #screen1 p { font-size: 1.2rem; margin-top: 15px; color: #ccc; }
+
+        /* --- SCREEN 2 (DIFFICULTY) --- */
+        #screen2 { flex-direction: column; }
+        .difficulty-cards { display: flex; gap: 30px; margin-top: 40px; }
+        .diff-card {
+            background: rgba(0,0,0,0.5);
+            border: 2px solid #333;
+            padding: 20px;
+            border-radius: 15px;
+            width: 300px;
+            text-align: left;
+        }
+        .diff-card.easy { border-color: var(--easy-color); }
+        .diff-card.medium { border-color: var(--medium-color); }
+        .diff-card.hard { border-color: var(--hard-color); }
+        .diff-card img { width: 80px; height: 80px; display: block; margin: 0 auto 10px; }
+        .diff-card h3 { font-size: 1.8rem; margin-bottom: 10px; }
+        .diff-card ul { list-style: none; margin-bottom: 20px; font-size: 1.1rem; }
+        .diff-btn { width: 100%; padding: 10px; font-size: 1.2rem; }
+        .diff-btn.inactive { border-color: var(--easy-color); color: var(--easy-color); background: transparent; }
+        .diff-btn.hover { background: var(--easy-color); color: black; }
+        
+        /* --- SCREEN 3, 4, 5, 6, 7 (GAME & OVERLAYS) --- */
+        #webcam, #gameCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #webcam { z-index: 0; transform: scaleX(-1); background: transparent; }
+        #gameCanvas { z-index: 1; }
+        
+        .hud { position: absolute; top: 20px; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 5; pointer-events: none; }
+        .hud-left, .hud-right { display: flex; align-items: center; gap: 15px; }
+        .hud-score { font-family: 'Gang of Three'; font-size: 2rem; color: var(--main-grad-2); }
+        .hud-icon { width: 40px; height: 40px; }
+        .life-icon { width: 30px; height: 30px; }
+
+        #screen4 h1, #screen5 h1, #screen6 h1 { font-size: 8rem; text-shadow: 4px 4px 0px rgba(0,0,0,0.5); }
+        #screen4 h1 { color: var(--main-grad-1); }
+        #screen5 h1 { background: linear-gradient(to bottom, var(--go-color-1), var(--go-color-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #screen6 h1 { background: linear-gradient(to bottom, var(--over-color-1), var(--over-color-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        #screen7 .score-display { font-family: 'Gang of Three'; font-size: 6rem; color: var(--main-grad-2); margin: 20px 0; }
+
+        /* Utility */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="hud" class="hud hidden">
+            <div class="hud-left">
+                <span class="hud-score">Best Score: <span id="scoreValue">0</span></span>
+                <img id="levelIcon" src="assets/Chevron.png" class="hud-icon" alt="Level Icon">
+                <img id="bombIcon" src="assets/Bomb.png" class="hud-icon hidden" alt="Bomb Icon">
+                <img id="fruitIcon" src="assets/Apple.png" class="hud-icon hidden" alt="Fruit Icon">
+            </div>
+            <div class="hud-right" id="livesContainer">
+                <img src="assets/Life.png" class="life-icon">
+                <img src="assets/Life.png" class="life-icon">
+                <img src="assets/Life.png" class="life-icon">
+            </div>
+        </div>
+
+        <div id="screen1" class="screen active">
+            <img src="assets/Logo.png" alt="Fruit Ninja Logo">
+            <h1 class="main-title">FRUIT NINJA</h1>
+            <button class="btn btn-play" onclick="goToScreen(2)">TAP TO PLAY</button>
+            <p>WAVE YOUR HAND TO SLICE OR USE MOUSE TO SLICE</p>
+        </div>
+
+        <div id="screen2" class="screen">
+            <h1 class="main-title">CHOOSE YOUR DIFFICULTY</h1>
+            <div class="difficulty-cards">
+                <div class="diff-card easy">
+                    <img src="assets/Orange.png" alt="Orange">
+                    <h3>EASY Slice & Chill</h3>
+                    <ul>
+                        <li>- Slow fruits</li>
+                        <li>- No life loss on miss</li>
+                    </ul>
+                    <button class="btn diff-btn inactive" data-level="easy" onclick="selectDifficulty('easy', this)">TAP TO SELECT</button>
+                </div>
+                <div class="diff-card medium">
+                    <img src="assets/Pear.png" alt="Pear">
+                    <h3>MEDIUM True Ninja</h3>
+                    <ul>
+                        <li>- Normal speed</li>
+                        <li>- Occasional bombs</li>
+                    </ul>
+                    <button class="btn diff-btn inactive" data-level="medium" onclick="selectDifficulty('medium', this)">TAP TO SELECT</button>
+                </div>
+                <div class="diff-card hard">
+                    <img src="assets/Bomb.png" alt="Bomb">
+                    <h3>HARD Slice & Chill</h3>
+                    <ul>
+                        <li>- Fast fruits</li>
+                        <li>- Many bombs</li>
+                    </ul>
+                    <button class="btn diff-btn inactive" data-level="hard" onclick="selectDifficulty('hard', this)">TAP TO SELECT</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen4" class="screen">
+            <h1>READY</h1>
+        </div>
+
+        <div id="screen5" class="screen">
+            <h1>GO!</h1>
+        </div>
+
+        <div id="screen6" class="screen">
+            <h1>GAME OVER!</h1>
+            <button class="btn btn-play" onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+
+        <div id="screen7" class="screen">
+            <h1 class="main-title">SCORE</h1>
+            <div class="score-display" id="finalScore">143</div>
+            <button class="btn btn-play" onclick="restartGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+    <script>
+        // --- GAME STATE & ASSETS ---
+        let currentScreen = 1;
+        let selectedDifficulty = null;
+        let score = 0;
+        let lives = 3;
+        let gameRunning = false;
+        
+        const fruitTypes = ['Apple', 'Lemon', 'Banana', 'Orange', 'Pear'];
+        const assets = {
+            'Apple': { whole: 'assets/Apple.png', slice1: 'assets/Sliced Apple 1.png', slice2: 'assets/Sliced Apple 2.png', splash: 'assets/Apple Splash.png' },
+            'Lemon': { whole: 'assets/Lemon.png', slice1: 'assets/Sliced Lemon 1.png', slice2: 'assets/Sliced Lemon 2.png', splash: 'assets/Lemon Splash.png' },
+            'Banana': { whole: 'assets/Banana.png', slice1: 'assets/Sliced Banana 1.png', slice2: 'assets/Sliced Banana 2.png', splash: 'assets/Banana Splash.png' },
+            'Orange': { whole: 'assets/Orange.png', slice1: 'assets/Sliced Orange 1.png', slice2: 'assets/Sliced Orange 2.png', splash: 'assets/Orange Splash.png' },
+            'Pear': { whole: 'assets/Pear.png', slice1: 'assets/Sliced Pear 1.png', slice2: 'assets/Sliced Pear 2.png', splash: 'assets/Pear Splash.png' },
+            'Bomb': { whole: 'assets/Bomb.png' },
+            'Cut': 'assets/Cut.png',
+            'Life': 'assets/Life.png'
+        };
+
+        // --- SCREEN MANAGEMENT ---
+        function goToScreen(screenNum) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            
+            // FIX: Screen 3 doesn't have a div, so we check if it exists first to prevent crash
+            const screenEl = document.getElementById(`screen${screenNum}`);
+            if (screenEl) {
+                screenEl.classList.add('active');
+            }
+            
+            currentScreen = screenNum;
+            
+            if (screenNum === 3) {
+                startGame();
+            }
+        }
+
+        function selectDifficulty(level, btn) {
+            selectedDifficulty = level;
+            
+            document.querySelectorAll('.diff-btn').forEach(b => {
+                b.textContent = "TAP TO SELECT";
+                b.classList.remove('hover');
+                b.classList.add('inactive');
+            });
+            
+            btn.textContent = "TAP TO PLAY";
+            btn.classList.remove('inactive');
+            btn.classList.add('hover');
+            
+            const levelIcon = document.getElementById('levelIcon');
+            const bombIcon = document.getElementById('bombIcon');
+            const fruitIcon = document.getElementById('fruitIcon');
+            
+            bombIcon.classList.add('hidden');
+            fruitIcon.classList.add('hidden');
+            
+            if (level === 'easy') {
+                levelIcon.src = 'assets/Orange.png';
+                fruitIcon.src = 'assets/Orange.png';
+                fruitIcon.classList.remove('hidden');
+            } else if (level === 'medium') {
+                levelIcon.src = 'assets/Pear.png';
+                fruitIcon.src = 'assets/Pear.png';
+                fruitIcon.classList.remove('hidden');
+                bombIcon.classList.remove('hidden');
+            } else if (level === 'hard') {
+                levelIcon.src = 'assets/Bomb.png';
+                bombIcon.src = 'assets/Bomb.png';
+                bombIcon.classList.remove('hidden');
+            }
+
+            setTimeout(() => {
+                goToScreen(4);
+                setTimeout(() => {
+                    goToScreen(5);
+                    setTimeout(() => {
+                        goToScreen(3);
+                    }, 1000);
+                }, 1000);
+            }, 800);
+        }
+
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            document.getElementById('scoreValue').innerText = score;
+            document.getElementById('livesContainer').innerHTML = '<img src="assets/Life.png" class="life-icon"><img src="assets/Life.png" class="life-icon"><img src="assets/Life.png" class="life-icon">';
+            goToScreen(2);
+        }
+
+        // --- GAME LOGIC (CANVAS & AR) ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('webcam');
+        
+        let fruits = [];
+        let sliceTrail = [];
+        let mousePos = { x: 0, y: 0 };
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        canvas.addEventListener('mousemove', (e) => {
+            mousePos.x = e.clientX;
+            mousePos.y = e.clientY;
+            if (gameRunning) {
+                sliceTrail.push({x: mousePos.x, y: mousePos.y, life: 20});
+                checkSlice(mousePos.x, mousePos.y);
+            }
+        });
+
+        // MediaPipe Hands Setup
+        let hands;
+        try {
+            hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            hands.onResults(onHandsResults);
+        } catch (e) {
+            console.error("MediaPipe Hands failed to load", e);
+        }
+
+        function onHandsResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                let indexTip = results.multiHandLandmarks[0][8];
+                let x = (1 - indexTip.x) * canvas.width; 
+                let y = indexTip.y * canvas.height;
+                
+                sliceTrail.push({x, y, life: 20});
+                if (gameRunning) checkSlice(x, y);
+            }
+        }
+
+        // Start Webcam
+        try {
+            const camera = new Camera(video, {
+                onFrame: async () => { 
+                    if (hands) await hands.send({image: video}); 
+                },
+                width: 1280,
+                height: 720
+            });
+            camera.start();
+        } catch (e) {
+            console.error("Camera failed to start. Make sure you are running on localhost.", e);
+        }
+
+        function startGame() {
+            document.getElementById('hud').classList.remove('hidden');
+            gameRunning = true;
+            fruits = [];
+            spawnFruit();
+            gameLoop();
+        }
+
+        function spawnFruit() {
+            if (!gameRunning) return;
+            
+            let isBomb = false;
+            let fruitName = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
+            
+            if (selectedDifficulty === 'medium' && Math.random() < 0.2) isBomb = true;
+            if (selectedDifficulty === 'hard' && Math.random() < 0.4) isBomb = true;
+            
+            let img = new Image();
+            img.src = isBomb ? assets['Bomb'].whole : assets[fruitName].whole;
+            
+            let fruit = {
+                img: img,
+                x: Math.random() * (canvas.width - 200) + 100,
+                y: canvas.height + 100,
+                vx: (Math.random() - 0.5) * 4,
+                vy: -15 - Math.random() * 5,
+                isBomb: isBomb,
+                name: fruitName,
+                sliced: false,
+                splash: new Image(),
+                slice1: new Image(),
+                slice2: new Image()
+            };
+            
+            if (!isBomb) {
+                fruit.splash.src = assets[fruitName].splash;
+                fruit.slice1.src = assets[fruitName].slice1;
+                fruit.slice2.src = assets[fruitName].slice2;
+            }
+            
+            fruits.push(fruit);
+            
+            let spawnTime = 2000;
+            if (selectedDifficulty === 'medium') spawnTime = 1200;
+            if (selectedDifficulty === 'hard') spawnTime = 800;
+            
+            setTimeout(spawnFruit, spawnTime);
+        }
+
+        function checkSlice(x, y) {
+            fruits.forEach((f, index) => {
+                if (!f.sliced && Math.hypot(f.x - x, f.y - y) < 80) {
+                    f.sliced = true;
+                    if (f.isBomb) {
+                        gameOver();
+                    } else {
+                        score += 10;
+                        document.getElementById('scoreValue').innerText = score;
+                    }
+                }
+            });
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('finalScore').innerText = score;
+            setTimeout(() => goToScreen(6), 500);
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            fruits = fruits.filter(f => {
+                f.x += f.vx;
+                f.y += f.vy;
+                f.vy += 0.2; 
+                
+                if (f.sliced && !f.isBomb) {
+                    ctx.drawImage(f.splash, f.x - 50, f.y - 50, 100, 100);
+                    return false; 
+                }
+                
+                if (!f.sliced) {
+                    ctx.drawImage(f.img, f.x - 50, f.y - 50, 100, 100);
+                }
+                
+                if (f.y > canvas.height + 200) {
+                    if (!f.isBomb && !f.sliced && selectedDifficulty !== 'easy') {
+                        lives--;
+                        let lifeHTML = '';
+                        for(let i=0; i<lives; i++) lifeHTML += '<img src="assets/Life.png" class="life-icon">';
+                        document.getElementById('livesContainer').innerHTML = lifeHTML;
+                        if (lives <= 0) gameOver();
+                    }
+                    return false;
+                }
+                return true;
+            });
+
+            sliceTrail = sliceTrail.filter(p => p.life > 0);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            sliceTrail.forEach((p, i) => {
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+                p.life -= 1;
+            });
+            ctx.stroke();
+            
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
