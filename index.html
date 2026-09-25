@@ -1015,9 +1015,17 @@ function goToScreen(screenNumber) {
         screenNumber === 3
     );
 
+    /*
+        Difficulty screen (2) is intentionally solid
+        black and has no camera behind it — hide the
+        pill there. Every other screen shows the
+        camera, so show the pill there too, not just
+        during gameplay, so camera problems are obvious
+        right from the start screen.
+    */
     handStatus.classList.toggle(
         'show',
-        screenNumber === 3
+        screenNumber !== 2
     );
 
 
@@ -1692,6 +1700,52 @@ async function setupMediaPipe() {
         'warning'
     );
 
+    /*
+        Camera access requires a secure context
+        (https://, or http://localhost). Opening
+        this file directly (file://) or over plain
+        http on a non-localhost host will make
+        getUserMedia fail silently in most browsers,
+        which looks identical to "hand tracking is
+        broken" but is really a hosting issue.
+    */
+
+    if (!window.isSecureContext) {
+
+        console.error(
+            'Not a secure context — camera blocked. ' +
+            'Serve this file over https:// or ' +
+            'http://localhost, not by double-clicking ' +
+            'it (file://) or from a plain http:// IP.'
+        );
+
+        setHandStatus(
+            'Camera blocked: open this via https:// or localhost, not by double-clicking the file — mouse/touch still works',
+            'error'
+        );
+
+        return;
+
+    }
+
+    if (
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+    ) {
+
+        console.error(
+            'navigator.mediaDevices.getUserMedia is unavailable in this browser context.'
+        );
+
+        setHandStatus(
+            'Camera API unavailable in this browser — use mouse/touch to slice',
+            'error'
+        );
+
+        return;
+
+    }
+
     try {
 
         if (
@@ -1802,8 +1856,28 @@ async function setupMediaPipe() {
 
         mediaPipeReady = false;
 
+        let reason =
+            'Camera unavailable — use mouse/touch to slice';
+
+        if (error && error.name === 'NotAllowedError') {
+
+            reason =
+                'Camera permission denied — allow it in your browser\'s site settings, then reload';
+
+        } else if (error && error.name === 'NotFoundError') {
+
+            reason =
+                'No camera found on this device — use mouse/touch to slice';
+
+        } else if (error && error.name === 'NotReadableError') {
+
+            reason =
+                'Camera is in use by another app — close it and reload';
+
+        }
+
         setHandStatus(
-            'Camera unavailable — use mouse/touch to slice',
+            reason,
             'error'
         );
 
