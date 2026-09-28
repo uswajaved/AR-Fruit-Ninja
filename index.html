@@ -64,9 +64,18 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .btn:hover { background:var(--easy-color); color:#000; transform:scale(1.03); }
 
 /* ===== ROTATING RING BUTTONS (Tap to Play / Settings / Retry / Quit / Back) ===== */
-.ring-btn { cursor:pointer; }
+.ring-btn { cursor:pointer; position:relative; }
 .ring-btn img { display:block; width:100%; height:100%; object-fit:contain; animation:ringSpin 16s linear infinite; }
 .ring-btn:hover img { animation-play-state:paused; }
+/* Shown only if the ring artwork 404s, so the button stays visible and usable */
+.ring-btn .ring-fallback { display:none; }
+.ring-btn.img-missing img { visibility:hidden; }
+.ring-btn.img-missing .ring-fallback {
+    display:flex; position:absolute; inset:0; align-items:center; justify-content:center;
+    text-align:center; border-radius:50%; border:3px solid var(--main-grad-2);
+    background:rgba(0,0,0,.65); color:var(--main-grad-1); font-family:'Gang of Three', cursive;
+    font-size:.9rem; line-height:1.2; padding:10%;
+}
 @keyframes ringSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
 .ring-play, .ring-settings { width:170px; height:170px; }
 .ring-retry, .ring-quit { width:150px; height:150px; }
@@ -172,8 +181,12 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 #screen6 h1 { background:linear-gradient(to bottom, #F86D5B, #E24D39); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
 
 /* SCORE PANEL (wood scroll artwork with score text overlaid) */
-.score-panel, .audio-panel { position:relative; width:min(650px,88vw); }
-.score-panel-bg, .audio-panel-bg { width:100%; height:auto; display:block; }
+.score-panel, .audio-panel {
+    position:relative; width:min(650px,88vw); aspect-ratio:1.4; min-height:230px;
+    border-radius:34px; overflow:hidden;
+    background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.15);
+}
+.score-panel-bg, .audio-panel-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .score-panel-content, .audio-panel-content {
     position:absolute; inset:0; display:flex; flex-direction:column;
     align-items:center; justify-content:center; padding:6% 10% 8%;
@@ -200,6 +213,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 }
 .toggle-square:hover { transform:scale(1.06); }
 .toggle-square img { width:58%; height:58%; object-fit:contain; }
+.icon-fallback { font-size:1.7rem; line-height:1; }
 .toggle-sound { background:linear-gradient(160deg,#b98cf0,#7c3aed); }
 .toggle-music { background:linear-gradient(160deg,#ffcf6e,#f08a1c); }
 
@@ -265,10 +279,12 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     </p>
     <div class="start-actions">
         <div class="ring-btn ring-play" onclick="goToScreen(2)">
-            <img src="assets/TAP_HERER_TO_PLAY.png" alt="Tap here to play">
+            <img src="assets/TAP_HERER_TO_PLAY.png" alt="Tap here to play" onerror="handleImgError(this)">
+            <span class="ring-fallback">TAP TO PLAY</span>
         </div>
         <div class="ring-btn ring-settings" onclick="goToScreen(8)">
-            <img src="assets/SETTINGS.png" alt="Settings">
+            <img src="assets/SETTINGS.png" alt="Settings" onerror="handleImgError(this)">
+            <span class="ring-fallback">SETTINGS</span>
         </div>
     </div>
 </div>
@@ -340,7 +356,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <!-- ================= SCORE ================= -->
 <div id="screen7" class="screen">
     <div class="score-panel">
-        <img class="score-panel-bg" src="assets/Background__2_.png" alt="">
+        <img class="score-panel-bg" src="assets/Background__2_.png" alt="" onerror="this.style.display='none'; console.warn('Missing asset:', this.src);">
         <div class="score-panel-content">
             <h2 class="score-title">SCORE</h2>
             <div class="score-display" id="finalScore">0</div>
@@ -348,10 +364,12 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     </div>
     <div class="score-actions">
         <div class="ring-btn ring-retry" onclick="restartGame()">
-            <img src="assets/RETRY.png" alt="Retry">
+            <img src="assets/RETRY.png" alt="Retry" onerror="handleImgError(this)">
+            <span class="ring-fallback">RETRY</span>
         </div>
         <div class="ring-btn ring-quit" onclick="quitGame()">
-            <img src="assets/QUIT.png" alt="Quit">
+            <img src="assets/QUIT.png" alt="Quit" onerror="handleImgError(this)">
+            <span class="ring-fallback">QUIT</span>
         </div>
     </div>
 </div>
@@ -359,21 +377,22 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <!-- ================= AUDIO / SETTINGS ================= -->
 <div id="screen8" class="screen">
     <div class="audio-panel">
-        <img class="audio-panel-bg" src="assets/Background__2_.png" alt="">
+        <img class="audio-panel-bg" src="assets/Background__2_.png" alt="" onerror="this.style.display='none'; console.warn('Missing asset:', this.src);">
         <div class="audio-panel-content">
             <h2 class="audio-title">AUDIO</h2>
             <div class="audio-toggles">
                 <button class="toggle-square toggle-sound" onclick="toggleSound()">
-                    <img id="soundIcon" src="assets/Sound_on.png" alt="Sound">
+                    <img id="soundIcon" src="assets/Sound_on.png" alt="Sound" data-fallback="🔊" onerror="handleImgError(this)">
                 </button>
                 <button class="toggle-square toggle-music" onclick="toggleMusic()">
-                    <img id="musicIcon" src="assets/Music_On.png" alt="Music">
+                    <img id="musicIcon" src="assets/Music_On.png" alt="Music" data-fallback="🎵" onerror="handleImgError(this)">
                 </button>
             </div>
         </div>
     </div>
     <div class="ring-btn ring-back" onclick="goToScreen(1)">
-        <img src="assets/Back.png" alt="Back">
+        <img src="assets/Back.png" alt="Back" onerror="handleImgError(this)">
+        <span class="ring-fallback">BACK</span>
     </div>
 </div>
 
@@ -390,6 +409,26 @@ const overlay = document.getElementById('cameraOverlay');
 const hud = document.getElementById('hud');
 const gameControls = document.getElementById('gameControls');
 const kaboomEffect = document.getElementById('kaboomEffect');
+
+/* Runs when any game-asset <img> 404s: logs the exact missing path so it's
+   easy to match against the assets/ folder, and swaps in a usable fallback
+   instead of leaving a broken-image glyph on screen. */
+function handleImgError(img) {
+    console.warn('Missing asset file — check assets/ for:', img.getAttribute('src'));
+    const ring = img.closest('.ring-btn');
+    if (ring) {
+        ring.classList.add('img-missing');
+        return;
+    }
+    img.style.display = 'none';
+    const fallback = img.dataset.fallback;
+    if (fallback && img.parentElement && !img.parentElement.querySelector('.icon-fallback')) {
+        const span = document.createElement('span');
+        span.className = 'icon-fallback';
+        span.textContent = fallback;
+        img.parentElement.appendChild(span);
+    }
+}
 const handStatus = document.getElementById('handStatus');
 
 let currentScreen = 1, selectedDifficulty = null, score = 0, lives = 3;
@@ -403,8 +442,14 @@ let soundEnabled = localStorage.getItem('fn_sound') !== 'off';
 let musicEnabled = localStorage.getItem('fn_music') !== 'off';
 
 function updateAudioIcons() {
-    document.getElementById('soundIcon').src = soundEnabled ? 'assets/Sound_on.png' : 'assets/Sound_off.png';
-    document.getElementById('musicIcon').src = musicEnabled ? 'assets/Music_On.png' : 'assets/Music_Off.png';
+    const soundIcon = document.getElementById('soundIcon');
+    const musicIcon = document.getElementById('musicIcon');
+    soundIcon.style.display = '';
+    musicIcon.style.display = '';
+    soundIcon.parentElement.querySelectorAll('.icon-fallback').forEach(el => el.remove());
+    musicIcon.parentElement.querySelectorAll('.icon-fallback').forEach(el => el.remove());
+    soundIcon.src = soundEnabled ? 'assets/Sound_on.png' : 'assets/Sound_off.png';
+    musicIcon.src = musicEnabled ? 'assets/Music_On.png' : 'assets/Music_Off.png';
 }
 function toggleSound() {
     soundEnabled = !soundEnabled;
