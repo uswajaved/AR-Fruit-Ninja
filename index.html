@@ -43,7 +43,8 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#f
 .screen.active { display:flex; }
 #screen2 { z-index:30; background:#000; }
 #screen1, #screen7 { z-index:10; }
-#screen4, #screen5, #screen6 { background:transparent; }
+#screen4, #screen5 { background:transparent; }
+#screen6 { background:rgba(0,0,0,.4); }
 h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .main-title {
     font-size:clamp(3rem,7vw,5rem);
@@ -63,12 +64,11 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .btn-play:hover { background:var(--main-grad-2); color:#000; }
 
 /* START SCREEN */
-#screen1 img { height:150px; width:auto; max-width:100%; object-fit:contain; margin-bottom:20px; }
+#screen1 img { height:220px; width:auto; max-width:100%; object-fit:contain; margin-bottom:30px; }
 #screen1 p { font-size:1.2rem; margin-top:15px; color:#eee; text-shadow:2px 2px 3px #000; }
 
 /* ===== DIFFICULTY (screen 2) ===== */
-.s2-logo { height:100px; width:auto; max-width:100%; object-fit:contain; margin-bottom:6px; }
-#screen2 .main-title { font-size:clamp(2.6rem,5vw,3.6rem); margin-bottom:4px; }
+.s2-logo { height:130px; width:auto; max-width:100%; object-fit:contain; margin-bottom:10px; }
 .s2-subtitle { font-family:'Gang of Three', cursive; font-size:1.6rem; color:#d8d8d8; letter-spacing:1px; }
 .difficulty-cards { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:40px; margin-top:40px; }
 .diff-card {
@@ -100,13 +100,15 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .diff-btn:hover .t-play, .diff-btn:focus-visible .t-play { display:inline; }
 
 /* HUD */
-.hud { position:absolute; top:30px; left:0; width:100%; display:none; justify-content:space-between; align-items:flex-start; padding:0 40px; z-index:6; pointer-events:none; }
+.hud { position:absolute; top:30px; left:0; width:100%; display:none; justify-content:space-between; align-items:flex-start; padding:0 40px; z-index:20; pointer-events:none; }
 .hud.active { display:flex; }
-.hud-left { display:flex; align-items:center; gap:15px; background:rgba(0,0,0,.4); padding:10px 20px; border-radius:10px; }
+.hud-left { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+.hud-row { display:flex; align-items:center; gap:14px; }
+.hud.faded .hud-right { opacity:.5; filter:grayscale(1) brightness(2); }
 .hud-icon { height:40px; width:auto; object-fit:contain; }
 .hud-text-block { display:flex; flex-direction:column; line-height:1.1; text-align:left; }
-.hud-score { font-family:'Gang of Three'; font-size:2rem; color:var(--main-grad-2); }
-.hud-best { font-size:1.2rem; }
+.hud-score { font-family:'Gang of Three'; font-size:2rem; line-height:1; background:linear-gradient(to bottom,#FFD478,#F0B429); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.hud-best { font-size:1rem; color:var(--main-grad-1); }
 .hud-right { display:flex; align-items:flex-end; gap:10px; }
 .life-icon { object-fit:contain; }
 .life-icon:nth-child(1) { width:30px; height:30px; }
@@ -120,7 +122,14 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 #screen6 h1 { background:linear-gradient(to bottom, var(--over-color-1), var(--over-color-2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 
 /* SCORE */
-#screen7 .score-display { font-family:'Gang of Three'; font-size:6rem; color:var(--main-grad-2); margin:20px 0; text-shadow:4px 4px 5px rgba(0,0,0,.6); }
+.score-panel { width:min(750px,90vw); padding:60px 20px 50px; background:#ccc; border-radius:40px; }
+.score-title { font-size:clamp(3rem,7vw,4.5rem); line-height:1; background:linear-gradient(to bottom,#FFD478,#F0B429); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.score-display { font-family:'Gang of Three'; font-size:clamp(5rem,12vw,8rem); line-height:1; margin-top:40px; background:linear-gradient(to bottom,#FFD478,#F0B429); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.score-actions { display:flex; gap:48px; align-items:center; margin-top:44px; }
+.pill-btn { font-family:'Royal Avenue Demo', sans-serif; font-size:2.2rem; letter-spacing:1px; border-radius:999px; cursor:pointer; padding:10px 34px; transition:transform .2s ease, filter .2s ease; }
+.pill-btn:hover { transform:scale(1.05); filter:brightness(1.05); }
+.pill-primary { color:#fff; border:none; background:linear-gradient(90deg,#FFD478,#F0B429); padding:14px 34px; }
+.pill-ghost { color:#F3B734; border:1px solid #F3B734; background:linear-gradient(90deg,rgba(255,236,190,.95),rgba(249,222,165,.95)); }
 
 /* KABOOM */
 #kaboomEffect {
@@ -163,11 +172,11 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <!-- HUD -->
 <div id="hud" class="hud">
     <div class="hud-left">
-        <img id="levelIcon" src="assets/Chevron.png" class="hud-icon" alt="Level">
-        <div class="hud-text-block">
+        <div class="hud-row">
+            <img id="levelIcon" src="assets/Chevron.png" class="hud-icon" alt="Level">
             <span class="hud-score" id="scoreValue">0</span>
-            <span class="hud-best">Best Score: <span id="bestScore">0</span></span>
         </div>
+        <span class="hud-best">Best Score: <span id="bestScore">0</span></span>
     </div>
     <div class="hud-right" id="livesContainer">
         <img src="assets/Life.png" class="life-icon">
@@ -179,7 +188,6 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <!-- START -->
 <div id="screen1" class="screen active">
     <img src="assets/Logo.png" alt="Fruit Ninja">
-    <h1 class="main-title">FRUIT NINJA</h1>
     <button class="btn btn-play" onclick="goToScreen(2)">TAP TO PLAY</button>
     <p>WAVE YOUR HAND TO SLICE OR USE MOUSE TO SLICE</p>
 </div>
@@ -187,7 +195,6 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <!-- DIFFICULTY -->
 <div id="screen2" class="screen">
     <img class="s2-logo" src="assets/Logo.png" alt="Fruit Ninja">
-    <h1 class="main-title">FRUIT NINJA</h1>
     <p class="s2-subtitle">CHOOSE YOUR DIFFICULTY</p>
 
     <div class="difficulty-cards">
@@ -201,7 +208,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
                 <li>Slower fruit speed</li>
                 <li>Missed fruits cost no life</li>
                 <li>Only bomb remove a life</li>
-                <li>Fewer bombs onscreen</li>
+                <li>Bomb appears every 20 pts</li>
             </ul>
             <button class="btn diff-btn" onclick="selectDifficulty('easy')">
                 <span class="t-select">TAP TO SELECT</span>
@@ -251,12 +258,16 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <div id="screen5" class="screen"><h1>GO!</h1></div>
 <div id="screen6" class="screen">
     <h1>GAME OVER!</h1>
-    <button class="btn btn-play" onclick="showScoreScreen()">VIEW SCORE</button>
 </div>
 <div id="screen7" class="screen">
-    <h1 class="main-title">SCORE</h1>
-    <div class="score-display" id="finalScore">0</div>
-    <button class="btn btn-play" onclick="restartGame()">PLAY AGAIN</button>
+    <div class="score-panel">
+        <h2 class="score-title">SCORE</h2>
+        <div class="score-display" id="finalScore">0</div>
+    </div>
+    <div class="score-actions">
+        <button class="pill-btn pill-primary" onclick="restartGame()">PLAY AGAIN</button>
+        <button class="pill-btn pill-ghost" onclick="quitGame()">QUIT</button>
+    </div>
 </div>
 
 </div>
@@ -276,7 +287,8 @@ const handStatus = document.getElementById('handStatus');
 
 /* ===== STATE ===== */
 let currentScreen = 1, selectedDifficulty = null, score = 0, lives = 3;
-let gameRunning = false, gameAnimationId = null, spawnTimer = null;
+let gameRunning = false, gameAnimationId = null, spawnTimer = null, gameOverTimer = null;
+let nextEasyBombAt = 20;
 let bestScore = Number(localStorage.getItem('fn_best_score')) || 0;
 document.getElementById('bestScore').textContent = bestScore;
 
@@ -326,8 +338,9 @@ function goToScreen(n) {
     const next = document.getElementById(`screen${n}`);
     if (next) next.classList.add('active');
     currentScreen = n;
-    overlay.classList.remove('visible');
-    hud.classList.toggle('active', n === 3);
+    overlay.classList.toggle('visible', n === 1);   /* 30% dark overlay on first screen only */
+    hud.classList.toggle('active', n === 3 || n === 6);
+    hud.classList.toggle('faded', n === 6);
     handStatus.classList.toggle('show', n !== 2);
     if (n !== 3) ctx.clearRect(0, 0, gameWidth(), gameHeight());
 }
@@ -353,7 +366,7 @@ function startCountdown() {
 /* ===== START GAME ===== */
 function startGame() {
     stopGameTimers();
-    score = 0; lives = 3;
+    score = 0; lives = 3; nextEasyBombAt = 20;
     fruits = []; halves = []; splashes = []; sliceTrail = [];
     document.getElementById('scoreValue').textContent = score;
     updateLives();
@@ -390,11 +403,14 @@ function scheduleNextFruit() {
 function spawnFruit() {
     if (!gameRunning) return;
 
-    let bombChance = 0.08;                              // easy: fewer bombs
-    if (selectedDifficulty === 'medium') bombChance = 0.15;
-    if (selectedDifficulty === 'hard')   bombChance = 0.30;
-
-    const isBomb = Math.random() < bombChance;
+    let isBomb;
+    if (selectedDifficulty === 'easy') {
+        /* easy: one bomb each time the score passes a multiple of 20 */
+        isBomb = score >= nextEasyBombAt;
+        if (isBomb) nextEasyBombAt = (Math.floor(score / 20) + 1) * 20;
+    } else {
+        isBomb = Math.random() < (selectedDifficulty === 'hard' ? 0.30 : 0.15);
+    }
     const fruitName = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
 
     let upwardSpeed = 16;
@@ -634,10 +650,10 @@ function onHandsResults(results) {
 setupMediaPipe();
 
 /* ===== LIVES ===== */
-function updateLives() {
+function updateLives(count = lives) {
     const container = document.getElementById('livesContainer');
     container.innerHTML = '';
-    for (let i = 0; i < lives; i++) {
+    for (let i = 0; i < count; i++) {
         const img = document.createElement('img');
         img.src = 'assets/Life.png';
         img.className = 'life-icon';
@@ -770,7 +786,9 @@ function gameOver() {
 
     document.getElementById('finalScore').textContent = score;
     ctx.clearRect(0, 0, gameWidth(), gameHeight());
+    updateLives(3);   /* all three hearts, shown faded */
     goToScreen(6);
+    gameOverTimer = setTimeout(() => { if (currentScreen === 6) showScoreScreen(); }, 2200);
 }
 
 /* ===== SCORE SCREEN ===== */
@@ -780,6 +798,11 @@ function showScoreScreen() {
 }
 
 /* ===== RESTART ===== */
+function quitGame() {
+    restartGame();
+    goToScreen(1);
+}
+
 function restartGame() {
     stopGameTimers();
     score = 0; lives = 3;
@@ -793,6 +816,7 @@ function restartGame() {
 
 /* ===== CLEANUP ===== */
 function stopGameTimers() {
+    if (gameOverTimer) { clearTimeout(gameOverTimer); gameOverTimer = null; }
     if (spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; }
     if (gameAnimationId) { cancelAnimationFrame(gameAnimationId); gameAnimationId = null; }
 }
