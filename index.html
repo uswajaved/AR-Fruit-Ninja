@@ -41,10 +41,11 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#f
 /* SCREENS */
 .screen { position:absolute; inset:0; display:none; flex-direction:column; justify-content:center; align-items:center; z-index:10; background:transparent; text-align:center; }
 .screen.active { display:flex; }
-#screen2 { z-index:30; background:#000; }
+#screen2 { z-index:30; background:#000; justify-content:flex-start; overflow-y:auto; overflow-x:hidden; padding:30px 20px 50px; min-height:100vh; }
 #screen1, #screen7 { z-index:10; }
 #screen4, #screen5 { background:transparent; }
 #screen6 { background:rgba(0,0,0,.4); }
+#screen7 { background:rgba(0,0,0,.7); }
 h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .main-title {
     font-size:clamp(3rem,7vw,5rem);
@@ -70,7 +71,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 /* ===== DIFFICULTY (screen 2) ===== */
 .s2-logo { height:130px; width:auto; max-width:100%; object-fit:contain; margin-bottom:10px; }
 .s2-subtitle { font-family:'Gang of Three', cursive; font-size:1.6rem; color:#d8d8d8; letter-spacing:1px; }
-.difficulty-cards { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:40px; margin-top:40px; }
+.difficulty-cards { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:40px; margin-top:40px; width:100%; padding-bottom:20px; }
 .diff-card {
     width:340px; padding:22px 26px 26px; border:1px solid var(--c); border-radius:22px;
     background:var(--bg); text-align:center; transition:transform .2s ease;
@@ -99,6 +100,37 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .diff-btn:hover .t-select, .diff-btn:focus-visible .t-select { display:none; }
 .diff-btn:hover .t-play, .diff-btn:focus-visible .t-play { display:inline; }
 
+/* Responsive / scrollable difficulty screen */
+#screen2 .s2-logo, #screen2 .s2-subtitle { flex-shrink:0; }
+
+@media (max-width: 1200px) {
+    .difficulty-cards { gap:24px; }
+    .diff-card { width:min(340px, 90vw); }
+}
+
+@media (max-width: 760px) {
+    #screen2 { padding:24px 14px 40px; }
+    .s2-logo { height:95px; margin-bottom:6px; }
+    .s2-subtitle { font-size:clamp(1.15rem, 5vw, 1.5rem); }
+    .difficulty-cards { margin-top:24px; gap:20px; flex-direction:column; flex-wrap:nowrap; }
+    .diff-card { width:min(360px, 100%); padding:18px 20px 22px; border-radius:18px; }
+    .diff-card img { height:65px; }
+    .diff-card h3 { font-size:3rem; }
+    .diff-sub { font-size:1.2rem; }
+    .diff-card ul { min-height:auto; margin-bottom:18px; font-size:.95rem; }
+    .diff-btn { width:min(240px, 100%); font-size:1.55rem; }
+}
+
+@media (max-height: 700px) and (min-width: 761px) {
+    #screen2 { justify-content:flex-start; padding-top:20px; padding-bottom:35px; }
+    .s2-logo { height:95px; }
+    .difficulty-cards { margin-top:20px; }
+    .diff-card { padding:16px 20px 20px; }
+    .diff-card img { height:60px; }
+    .diff-card h3 { font-size:3rem; }
+    .diff-card ul { min-height:auto; margin-bottom:16px; font-size:.9rem; }
+}
+
 /* HUD */
 .hud { position:absolute; top:30px; left:0; width:100%; display:none; justify-content:space-between; align-items:flex-start; padding:0 40px; z-index:20; pointer-events:none; }
 .hud.active { display:flex; }
@@ -122,7 +154,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 #screen6 h1 { background:linear-gradient(to bottom, #F86D5B, #E24D39); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
 
 /* SCORE */
-.score-panel { width:min(750px,90vw); padding:60px 20px 50px; background:rgba(0,0,0,.3); border-radius:40px; }
+.score-panel { width:min(750px,90vw); padding:60px 20px 50px; background:rgba(0,0,0,.7); border-radius:40px; }
 .score-title { font-size:clamp(3rem,7vw,4.5rem); line-height:1; background:linear-gradient(to bottom,#FFD478,#F0B429); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 .score-display { font-family:'Gang of Three'; font-size:clamp(5rem,12vw,8rem); line-height:1; margin-top:40px; background:linear-gradient(to bottom,#FFD478,#F0B429); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 .score-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:32px; align-items:center; margin-top:44px; }
@@ -131,10 +163,10 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .pill-primary { color:#fff; border:none; background:linear-gradient(90deg,#FFD478,#F0B429); }
 .pill-ghost { color:#F3B734; border:1px solid #F3B734; background:linear-gradient(90deg,rgba(255,236,190,.95),rgba(249,222,165,.95)); }
 
-/* KABOOM (image burst over dimmed camera) */
+/* KABOOM: 10% larger than viewport */
 #kaboomEffect { position:absolute; inset:0; z-index:15; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.4); pointer-events:none; overflow:hidden; }
 #kaboomEffect.show { display:flex; animation:kaboomFade .9s ease-out forwards; }
-#kaboomEffect img { height:100vh; width:auto; max-width:none; object-fit:contain; animation:kaboomPop .9s ease-out forwards; }
+#kaboomEffect img { width:110vw; height:110vh; max-width:none; max-height:none; object-fit:contain; animation:kaboomPop .9s ease-out forwards; }
 @keyframes kaboomFade { 0% { opacity:0; } 15% { opacity:1; } 80% { opacity:1; } 100% { opacity:0; } }
 @keyframes kaboomPop { 0% { transform:scale(.3); } 30% { transform:scale(1.05); } 100% { transform:scale(1); } }
 
@@ -189,7 +221,6 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     <p class="s2-subtitle">CHOOSE YOUR DIFFICULTY</p>
 
     <div class="difficulty-cards">
-
         <div class="diff-card easy">
             <img src="assets/Orange.png" alt="Orange">
             <h3>EASY</h3>
@@ -240,16 +271,13 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
                 <span class="t-play">TAP TO PLAY</span>
             </button>
         </div>
-
     </div>
 </div>
 
 <!-- READY / GO / GAME OVER / SCORE -->
 <div id="screen4" class="screen"><h1>READY</h1></div>
 <div id="screen5" class="screen"><h1>GO!</h1></div>
-<div id="screen6" class="screen">
-    <h1>GAME OVER!</h1>
-</div>
+<div id="screen6" class="screen"><h1>GAME OVER!</h1></div>
 <div id="screen7" class="screen">
     <div class="score-panel">
         <h2 class="score-title">SCORE</h2>
@@ -267,7 +295,6 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"></script>
 
 <script>
-/* ===== DOM ===== */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const video = document.getElementById('webcam');
@@ -276,14 +303,12 @@ const hud = document.getElementById('hud');
 const kaboomEffect = document.getElementById('kaboomEffect');
 const handStatus = document.getElementById('handStatus');
 
-/* ===== STATE ===== */
 let currentScreen = 1, selectedDifficulty = null, score = 0, lives = 3;
 let gameRunning = false, gameAnimationId = null, spawnTimer = null, gameOverTimer = null;
 let nextEasyBombAt = 20;
 let bestScore = Number(localStorage.getItem('fn_best_score')) || 0;
 document.getElementById('bestScore').textContent = bestScore;
 
-/* ===== ASSETS ===== */
 const fruitTypes = ['Apple', 'Lemon', 'Banana', 'Orange', 'Pear'];
 const assets = { Bomb: { whole: 'assets/Bomb.png' } };
 fruitTypes.forEach(n => {
@@ -309,7 +334,6 @@ const cutImg = getImage('assets/Cut with hand.png');
 
 let fruits = [], halves = [], splashes = [], sliceTrail = [];
 
-/* ===== CANVAS ===== */
 function resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = window.innerWidth * dpr;
@@ -323,13 +347,12 @@ resizeCanvas();
 const gameWidth = () => window.innerWidth;
 const gameHeight = () => window.innerHeight;
 
-/* ===== SCREENS ===== */
 function goToScreen(n) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const next = document.getElementById(`screen${n}`);
     if (next) next.classList.add('active');
     currentScreen = n;
-    overlay.classList.toggle('visible', n === 1);   /* 30% dark overlay on first screen only */
+    overlay.classList.toggle('visible', n === 1);
     hud.classList.toggle('active', n === 3 || n === 6);
     hud.classList.toggle('faded', n === 6);
     handStatus.classList.toggle('show', n !== 2);
@@ -337,7 +360,6 @@ function goToScreen(n) {
 }
 goToScreen(1);
 
-/* ===== DIFFICULTY ===== */
 function selectDifficulty(level) {
     selectedDifficulty = level;
     const icons = { easy: 'Orange', medium: 'Pear', hard: 'Bomb' };
@@ -345,7 +367,6 @@ function selectDifficulty(level) {
     startCountdown();
 }
 
-/* ===== COUNTDOWN ===== */
 function startCountdown() {
     goToScreen(4);
     setTimeout(() => {
@@ -354,7 +375,6 @@ function startCountdown() {
     }, 1000);
 }
 
-/* ===== START GAME ===== */
 function startGame() {
     stopGameTimers();
     score = 0; lives = 3; nextEasyBombAt = 20;
@@ -367,8 +387,6 @@ function startGame() {
     gameLoop();
 }
 
-/* ===== SPAWNING ===== */
-/* Medium & Hard: speed rises with every 10 pts (capped) */
 function speedFactor() {
     if (selectedDifficulty === 'easy') return 1;
     return Math.min(1.6, 1 + Math.floor(score / 10) * 0.03);
@@ -376,15 +394,15 @@ function speedFactor() {
 
 function spawnWave() {
     let count = 1;
-    if (selectedDifficulty === 'hard') count = 3 + Math.floor(Math.random() * 2); // 3-4 at once
+    if (selectedDifficulty === 'hard') count = 3 + Math.floor(Math.random() * 2);
     for (let i = 0; i < count; i++) setTimeout(spawnFruit, i * 120);
 }
 
 function scheduleNextFruit() {
     if (!gameRunning) return;
-    let delay = 1800;                                   // easy
+    let delay = 1800;
     if (selectedDifficulty === 'medium') delay = 1200;
-    if (selectedDifficulty === 'hard')   delay = 1600;  // waves of 3-4
+    if (selectedDifficulty === 'hard') delay = 1600;
     spawnTimer = setTimeout(() => {
         spawnWave();
         scheduleNextFruit();
@@ -396,7 +414,6 @@ function spawnFruit() {
 
     let isBomb;
     if (selectedDifficulty === 'easy') {
-        /* easy: one bomb each time the score passes a multiple of 20 */
         isBomb = score >= nextEasyBombAt;
         if (isBomb) nextEasyBombAt = (Math.floor(score / 20) + 1) * 20;
     } else {
@@ -420,12 +437,11 @@ function spawnFruit() {
         vy: -(upwardSpeed + Math.random() * 4) * speedFactor(),
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - .5) * .08,
-        radius: 90,
+        radius: isBomb ? 63 : 90,
         sliced: false
     });
 }
 
-/* ===== MOUSE / TOUCH SLICING ===== */
 let pointerIsDown = false, lastPointerPoint = null;
 
 window.addEventListener('pointerdown', e => {
@@ -458,7 +474,6 @@ function addSliceSegment(start, end) {
     }
 }
 
-/* Universal slice input: mouse and MediaPipe both call this */
 function addSlicePoint(x, y) {
     if (!gameRunning) return;
     sliceTrail.push({ x, y, life: 16 });
@@ -466,7 +481,6 @@ function addSlicePoint(x, y) {
     checkSlice(x, y);
 }
 
-/* ===== COLLISION ===== */
 function checkSlice(x, y) {
     if (!gameRunning) return;
     for (const fruit of fruits) {
@@ -479,10 +493,9 @@ function sliceFruit(fruit) {
     if (fruit.sliced) return;
     fruit.sliced = true;
 
-    /* BOMB */
     if (fruit.isBomb) {
         if (selectedDifficulty === 'easy') { lives--; updateLives(); }
-        const ends = selectedDifficulty !== 'easy' || lives <= 0;   // medium/hard: bomb ends the game
+        const ends = selectedDifficulty !== 'easy' || lives <= 0;
         showKaboom(ends);
         if (ends) setTimeout(gameOver, 900);
         return;
@@ -492,7 +505,6 @@ function sliceFruit(fruit) {
     document.getElementById('scoreValue').textContent = score;
 
     const a = assets[fruit.name];
-
     splashes.push({ img: getImage(a.splash), x: fruit.x, y: fruit.y, life: 90, maxLife: 90 });
 
     halves.push({
@@ -507,7 +519,6 @@ function sliceFruit(fruit) {
     });
 }
 
-/* ===== MEDIAPIPE ===== */
 let hands = null, camera = null, mediaPipeReady = false;
 let lastHandSeenAt = 0, handFrameInFlight = false;
 let smoothedHandPoint = null;
@@ -522,7 +533,6 @@ function setHandStatus(text, mode) {
 async function setupMediaPipe() {
     setHandStatus('Starting camera…', 'warning');
 
-    /* Camera needs a secure context (https:// or http://localhost) */
     if (!window.isSecureContext) {
         console.error('Not a secure context — camera blocked. Serve via https:// or http://localhost.');
         setHandStatus('Camera blocked: open this via https:// or localhost, not by double-clicking the file — mouse/touch still works', 'error');
@@ -546,7 +556,7 @@ async function setupMediaPipe() {
 
         hands.setOptions({
             maxNumHands: 1,
-            modelComplexity: 0,   /* lite model = faster, less lag */
+            modelComplexity: 0,
             minDetectionConfidence: .5,
             minTrackingConfidence: .5
         });
@@ -555,7 +565,6 @@ async function setupMediaPipe() {
 
         camera = new Camera(video, {
             onFrame: async () => {
-                /* skip a frame instead of queueing it, so tracking never lags behind */
                 if (hands && !handFrameInFlight) {
                     handFrameInFlight = true;
                     try {
@@ -602,14 +611,13 @@ function checkHandTrackingHealth() {
     setTimeout(checkHandTrackingHealth, 4000);
 }
 
-/* ===== HAND RESULTS ===== */
 function handPointToScreen(landmark) {
     const sw = gameWidth(), sh = gameHeight();
     const vw = video.videoWidth || 1280, vh = video.videoHeight || 720;
     const scale = Math.max(sw / vw, sh / vh);
     const rw = vw * scale, rh = vh * scale;
     const cropX = (rw - sw) / 2, cropY = (rh - sh) / 2;
-    const mirroredX = 1 - landmark.x;   /* CSS video is mirrored */
+    const mirroredX = 1 - landmark.x;
     return { x: mirroredX * rw - cropX, y: landmark.y * rh - cropY };
 }
 
@@ -621,7 +629,7 @@ function onHandsResults(results) {
 
     if (!gameRunning) return;
 
-    const indexTip = results.multiHandLandmarks[0][8];   /* index fingertip */
+    const indexTip = results.multiHandLandmarks[0][8];
     const raw = handPointToScreen(indexTip);
 
     if (!smoothedHandPoint) {
@@ -636,7 +644,6 @@ function onHandsResults(results) {
 
 setupMediaPipe();
 
-/* ===== LIVES ===== */
 function updateLives(count = lives) {
     const container = document.getElementById('livesContainer');
     container.innerHTML = '';
@@ -648,7 +655,6 @@ function updateLives(count = lives) {
     }
 }
 
-/* ===== GAME LOOP ===== */
 function gameLoop() {
     if (!gameRunning) return;
     ctx.clearRect(0, 0, gameWidth(), gameHeight());
@@ -670,7 +676,9 @@ function updateWholeFruits() {
         fruit.vy += gravity;
         fruit.rotation += fruit.rotationSpeed;
 
-        drawImageFixedHeight(fruit.img, fruit.x, fruit.y, fruitHeight, fruit.rotation);
+        /* Bomb is displayed 30% smaller than normal fruits. */
+        const displayHeight = fruit.isBomb ? fruitHeight * 0.7 : fruitHeight;
+        drawImageFixedHeight(fruit.img, fruit.x, fruit.y, displayHeight, fruit.rotation);
 
         if (fruit.y > gameHeight() + 120) {
             if (!fruit.isBomb && selectedDifficulty !== 'easy') {
@@ -740,7 +748,6 @@ function drawSliceTrail() {
     sliceTrail = sliceTrail.filter(p => p.life > 0);
 }
 
-/* Fixed height, width follows aspect ratio (never stretched) */
 function drawImageFixedHeight(image, x, y, height, rotation) {
     if (!image.complete || image.naturalWidth === 0) return;
     const width = height * (image.naturalWidth / image.naturalHeight);
@@ -751,19 +758,17 @@ function drawImageFixedHeight(image, x, y, height, rotation) {
     ctx.restore();
 }
 
-/* ===== KABOOM ===== */
 function showKaboom(ending) {
-    if (ending) {                     /* faded hearts behind the burst, like the mock */
+    if (ending) {
         updateLives(3);
         hud.classList.add('faded');
     }
     kaboomEffect.classList.remove('show');
-    void kaboomEffect.offsetWidth;   /* restart animation */
+    void kaboomEffect.offsetWidth;
     kaboomEffect.classList.add('show');
     setTimeout(() => kaboomEffect.classList.remove('show'), 950);
 }
 
-/* ===== GAME OVER ===== */
 function gameOver() {
     if (!gameRunning) return;
     gameRunning = false;
@@ -777,18 +782,16 @@ function gameOver() {
 
     document.getElementById('finalScore').textContent = score;
     ctx.clearRect(0, 0, gameWidth(), gameHeight());
-    updateLives(3);   /* all three hearts, shown faded */
+    updateLives(3);
     goToScreen(6);
     gameOverTimer = setTimeout(() => { if (currentScreen === 6) showScoreScreen(); }, 2200);
 }
 
-/* ===== SCORE SCREEN ===== */
 function showScoreScreen() {
     document.getElementById('finalScore').textContent = score;
     goToScreen(7);
 }
 
-/* ===== RESTART ===== */
 function quitGame() {
     restartGame();
     goToScreen(1);
@@ -805,7 +808,6 @@ function restartGame() {
     goToScreen(2);
 }
 
-/* ===== CLEANUP ===== */
 function stopGameTimers() {
     if (gameOverTimer) { clearTimeout(gameOverTimer); gameOverTimer = null; }
     if (spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; }
