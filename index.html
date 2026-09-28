@@ -182,11 +182,11 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 
 /* SCORE PANEL (wood scroll artwork with score text overlaid) */
 .score-panel, .audio-panel {
-    position:relative; width:min(650px,88vw); aspect-ratio:1.4; min-height:230px;
+    position:relative; width:min(650px,88vw); min-height:230px;
     border-radius:34px; overflow:hidden;
     background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.15);
 }
-.score-panel-bg, .audio-panel-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.score-panel-bg, .audio-panel-bg { display:block; width:100%; height:auto; }
 .score-panel-content, .audio-panel-content {
     position:absolute; inset:0; display:flex; flex-direction:column;
     align-items:center; justify-content:center; padding:6% 10% 8%;
@@ -448,6 +448,10 @@ function updateAudioIcons() {
     musicIcon.style.display = '';
     soundIcon.parentElement.querySelectorAll('.icon-fallback').forEach(el => el.remove());
     musicIcon.parentElement.querySelectorAll('.icon-fallback').forEach(el => el.remove());
+    /* Kept in sync so that even the broken-image fallback glyph changes
+       between on/off — proof the toggle worked while a filename is fixed. */
+    soundIcon.dataset.fallback = soundEnabled ? '🔊' : '🔇';
+    musicIcon.dataset.fallback = musicEnabled ? '🎵' : '🔕';
     soundIcon.src = soundEnabled ? 'assets/Sound_on.png' : 'assets/Sound_off.png';
     musicIcon.src = musicEnabled ? 'assets/Music_On.png' : 'assets/Music_Off.png';
 }
