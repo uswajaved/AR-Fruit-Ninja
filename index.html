@@ -77,9 +77,9 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     background:var(--bg); text-align:center; transition:transform .2s ease;
 }
 .diff-card:hover { transform:scale(1.03); }
-.diff-card.easy   { --c:var(--easy-color);   --bg:#331808; }
+.diff-card.easy { --c:var(--easy-color); --bg:#331808; }
 .diff-card.medium { --c:var(--medium-color); --bg:#2a2a0e; }
-.diff-card.hard   { --c:var(--hard-color);   --bg:#1e2030; }
+.diff-card.hard { --c:var(--hard-color); --bg:#1e2030; }
 .diff-card img { height:80px; width:auto; max-width:100%; object-fit:contain; display:block; margin:0 auto 10px; }
 .diff-card h3 { font-size:4rem; line-height:1; color:#fff; }
 .diff-sub { font-family:'Gang of Three', cursive; font-size:1.5rem; color:#fff; margin-top:4px; }
@@ -100,6 +100,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .diff-btn:hover .t-select, .diff-btn:focus-visible .t-select { display:none; }
 .diff-btn:hover .t-play, .diff-btn:focus-visible .t-play { display:inline; }
 
+/* Responsive / scrollable difficulty screen */
 #screen2 .s2-logo, #screen2 .s2-subtitle { flex-shrink:0; }
 
 @media (max-width: 1200px) {
@@ -162,7 +163,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .pill-primary { color:#fff; border:none; background:linear-gradient(90deg,#FFD478,#F0B429); }
 .pill-ghost { color:#F3B734; border:1px solid #F3B734; background:linear-gradient(90deg,rgba(255,236,190,.95),rgba(249,222,165,.95)); }
 
-/* KABOOM */
+/* KABOOM: 10% larger than viewport */
 #kaboomEffect { position:absolute; inset:0; z-index:15; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.4); pointer-events:none; overflow:hidden; }
 #kaboomEffect.show { display:flex; animation:kaboomFade .9s ease-out forwards; }
 #kaboomEffect img { width:110vw; height:110vh; max-width:none; max-height:none; object-fit:contain; animation:kaboomPop .9s ease-out forwards; }
@@ -178,8 +179,8 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 }
 #handStatus.show { display:block; }
 #handStatus.tracking { color:#9CFF7A; border-color:rgba(156,255,122,.5); }
-#handStatus.warning  { color:#FFD478; border-color:rgba(255,212,120,.5); }
-#handStatus.error    { color:#F86D5B; border-color:rgba(248,109,91,.5); }
+#handStatus.warning { color:#FFD478; border-color:rgba(255,212,120,.5); }
+#handStatus.error { color:#F86D5B; border-color:rgba(248,109,91,.5); }
 </style>
 </head>
 <body>
@@ -294,194 +295,6 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"></script>
 
 <script>
-/* =========================================================
-   WEB AUDIO API SOUND ENGINE
-   ========================================================= */
-let audioCtx = null;
-let lastSwishTime = 0;
-
-function initAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-}
-
-// Unlock audio context on any first touch or click
-window.addEventListener('pointerdown', initAudio, { once: true });
-
-function playSwishSound() {
-    if (!audioCtx) return;
-    const now = Date.now();
-    if (now - lastSwishTime < 110) return; // Debounce swish frequency
-    lastSwishTime = now;
-
-    const bufferSize = audioCtx.sampleRate * 0.12; // 120ms
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-    }
-
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = buffer;
-
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(800, audioCtx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(1800, audioCtx.currentTime + 0.08);
-    filter.Q.value = 3;
-
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.11);
-
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    noise.start();
-}
-
-function playFruitSliceSound() {
-    if (!audioCtx) return;
-
-    // 1. Sharp cut pop
-    const osc = audioCtx.createOscillator();
-    const oscGain = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(600 + Math.random() * 200, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.09);
-
-    oscGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.09);
-
-    osc.connect(oscGain);
-    oscGain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.09);
-
-    // 2. Juicy squish noise burst
-    const bufferSize = audioCtx.sampleRate * 0.15;
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-    }
-
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = buffer;
-
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2500, audioCtx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.15);
-
-    const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(0.6, audioCtx.currentTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(audioCtx.destination);
-
-    noise.start();
-}
-
-function playBombExplosionSound() {
-    if (!audioCtx) return;
-
-    // Deep pitch drop sine wave
-    const osc = audioCtx.createOscillator();
-    const oscGain = audioCtx.createGain();
-
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.6);
-
-    oscGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
-
-    osc.connect(oscGain);
-    oscGain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.6);
-
-    // Blast noise buffer
-    const bufferSize = audioCtx.sampleRate * 0.5;
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-    }
-
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = buffer;
-
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1000, audioCtx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
-
-    const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(audioCtx.destination);
-
-    noise.start();
-}
-
-function playLifeLostSound() {
-    if (!audioCtx) return;
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(320, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.25);
-
-    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.25);
-}
-
-function playGameOverSound() {
-    if (!audioCtx) return;
-
-    const notes = [220, 196, 174, 130];
-    notes.forEach((freq, idx) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.15);
-
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime + idx * 0.15);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + idx * 0.15 + 0.2);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start(audioCtx.currentTime + idx * 0.15);
-        osc.stop(audioCtx.currentTime + idx * 0.15 + 0.2);
-    });
-}
-
-/* =========================================================
-   GAME ENGINE & LOGIC
-   ========================================================= */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const video = document.getElementById('webcam');
@@ -521,6 +334,325 @@ const cutImg = getImage('assets/Cut with hand.png');
 
 let fruits = [], halves = [], splashes = [], sliceTrail = [];
 
+/* =========================================================
+   WEB AUDIO API SOUND ENGINE
+   - Sword swish: while slicing/moving
+   - Sword strike: when a normal fruit is sliced
+   - Bomb explosion: when a bomb is sliced
+   - Life lost: when fruit is missed on Medium/Hard
+   - Game over: when the round ends
+   ========================================================= */
+let audioContext = null;
+let masterGain = null;
+let lastSwishAt = 0;
+let lastAudioSlicePoint = null;
+let lastLifeLostAt = 0;
+const SWISH_COOLDOWN = 90;
+const LIFE_LOST_COOLDOWN = 180;
+
+function initAudio() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+        console.warn('Web Audio API is not supported in this browser.');
+        return null;
+    }
+
+    if (!audioContext || audioContext.state === 'closed') {
+        audioContext = new AudioContextClass();
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = 0.62;
+        masterGain.connect(audioContext.destination);
+    }
+
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().catch(err => console.warn('Audio resume failed:', err));
+    }
+
+    return audioContext;
+}
+
+function audioDestination(audio) {
+    return masterGain || audio.destination;
+}
+
+function createNoiseBuffer(audio, duration, envelopeFn) {
+    const frameCount = Math.max(1, Math.ceil(audio.sampleRate * duration));
+    const buffer = audio.createBuffer(1, frameCount, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < frameCount; i++) {
+        const progress = i / frameCount;
+        data[i] = (Math.random() * 2 - 1) * envelopeFn(progress);
+    }
+
+    return buffer;
+}
+
+function playSwordSwish(speed = 1) {
+    const audio = initAudio();
+    if (!audio || audio.state !== 'running') return;
+
+    const nowMs = performance.now();
+    if (nowMs - lastSwishAt < SWISH_COOLDOWN) return;
+    lastSwishAt = nowMs;
+
+    const now = audio.currentTime;
+    speed = Math.max(0.4, Math.min(speed, 3));
+
+    const duration = Math.max(0.09, Math.min(0.20, 0.19 - speed * 0.025));
+    const volume = Math.max(0.035, Math.min(0.105, 0.035 + speed * 0.022));
+    const source = audio.createBufferSource();
+    source.buffer = createNoiseBuffer(audio, duration, p => Math.sin(p * Math.PI));
+
+    const bandpass = audio.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.Q.value = 0.85;
+    bandpass.frequency.setValueAtTime(700 + speed * 180, now);
+    bandpass.frequency.exponentialRampToValueAtTime(2300 + speed * 850, now + duration * 0.55);
+    bandpass.frequency.exponentialRampToValueAtTime(900 + speed * 200, now + duration);
+
+    const highpass = audio.createBiquadFilter();
+    highpass.type = 'highpass';
+    highpass.frequency.value = 350;
+
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(volume * 0.55, now + duration * 0.52);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    const panner = audio.createStereoPanner();
+    panner.pan.setValueAtTime((Math.random() * 0.7) - 0.35, now);
+    panner.pan.linearRampToValueAtTime((Math.random() * 0.7) - 0.35, now + duration);
+
+    source.connect(bandpass);
+    bandpass.connect(highpass);
+    highpass.connect(gain);
+    gain.connect(panner);
+    panner.connect(audioDestination(audio));
+
+    source.start(now);
+    source.stop(now + duration + 0.03);
+}
+
+function handleSwordMovement(x, y) {
+    const now = performance.now();
+
+    if (!lastAudioSlicePoint) {
+        lastAudioSlicePoint = { x, y, time: now };
+        return;
+    }
+
+    const dx = x - lastAudioSlicePoint.x;
+    const dy = y - lastAudioSlicePoint.y;
+    const distance = Math.hypot(dx, dy);
+    const elapsed = Math.max(1, now - lastAudioSlicePoint.time);
+
+    if (distance >= 12) {
+        const speed = (distance / elapsed) * 16.67;
+        playSwordSwish(speed);
+    }
+
+    lastAudioSlicePoint = { x, y, time: now };
+}
+
+function playSwordStrike() {
+    const audio = initAudio();
+    if (!audio || audio.state !== 'running') return;
+
+    const now = audio.currentTime;
+    const strikeDuration = 0.12;
+    const variation = (Math.random() - 0.5) * 120;
+
+    const bladeTone = audio.createOscillator();
+    const bladeGain = audio.createGain();
+    const bladeFilter = audio.createBiquadFilter();
+
+    bladeTone.type = 'triangle';
+    bladeTone.frequency.setValueAtTime(1550 + variation, now);
+    bladeTone.frequency.exponentialRampToValueAtTime(720 + variation * 0.25, now + strikeDuration);
+    bladeFilter.type = 'highpass';
+    bladeFilter.frequency.value = 500;
+
+    bladeGain.gain.setValueAtTime(0.0001, now);
+    bladeGain.gain.exponentialRampToValueAtTime(0.12, now + 0.004);
+    bladeGain.gain.exponentialRampToValueAtTime(0.0001, now + strikeDuration);
+
+    bladeTone.connect(bladeFilter);
+    bladeFilter.connect(bladeGain);
+    bladeGain.connect(audioDestination(audio));
+    bladeTone.start(now);
+    bladeTone.stop(now + strikeDuration + 0.02);
+
+    const noiseDuration = 0.075;
+    const noiseSource = audio.createBufferSource();
+    noiseSource.buffer = createNoiseBuffer(audio, noiseDuration, p => Math.pow(1 - p, 4));
+
+    const noiseFilter = audio.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = 1800;
+
+    const noiseGain = audio.createGain();
+    noiseGain.gain.setValueAtTime(0.09, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + noiseDuration);
+
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(audioDestination(audio));
+    noiseSource.start(now);
+    noiseSource.stop(now + noiseDuration + 0.02);
+}
+
+function playBombExplosion() {
+    const audio = initAudio();
+    if (!audio || audio.state !== 'running') return;
+
+    const now = audio.currentTime;
+    const boomDuration = 0.85;
+
+    const bass = audio.createOscillator();
+    const bassGain = audio.createGain();
+    bass.type = 'sine';
+    bass.frequency.setValueAtTime(145, now);
+    bass.frequency.exponentialRampToValueAtTime(38, now + 0.28);
+    bassGain.gain.setValueAtTime(0.0001, now);
+    bassGain.gain.exponentialRampToValueAtTime(0.33, now + 0.012);
+    bassGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
+    bass.connect(bassGain);
+    bassGain.connect(audioDestination(audio));
+    bass.start(now);
+    bass.stop(now + 0.56);
+
+    const noiseSource = audio.createBufferSource();
+    noiseSource.buffer = createNoiseBuffer(audio, boomDuration, p => Math.pow(1 - p, 2.3));
+
+    const explosionFilter = audio.createBiquadFilter();
+    explosionFilter.type = 'lowpass';
+    explosionFilter.Q.value = 0.7;
+    explosionFilter.frequency.setValueAtTime(5000, now);
+    explosionFilter.frequency.exponentialRampToValueAtTime(280, now + boomDuration);
+
+    const explosionGain = audio.createGain();
+    explosionGain.gain.setValueAtTime(0.0001, now);
+    explosionGain.gain.exponentialRampToValueAtTime(0.25, now + 0.008);
+    explosionGain.gain.exponentialRampToValueAtTime(0.0001, now + boomDuration);
+
+    noiseSource.connect(explosionFilter);
+    explosionFilter.connect(explosionGain);
+    explosionGain.connect(audioDestination(audio));
+    noiseSource.start(now);
+    noiseSource.stop(now + boomDuration + 0.03);
+
+    const debrisDuration = 0.22;
+    const debrisSource = audio.createBufferSource();
+    debrisSource.buffer = createNoiseBuffer(audio, debrisDuration, p => Math.pow(1 - p, 5));
+
+    const debrisFilter = audio.createBiquadFilter();
+    debrisFilter.type = 'highpass';
+    debrisFilter.frequency.value = 1900;
+
+    const debrisGain = audio.createGain();
+    debrisGain.gain.setValueAtTime(0.09, now);
+    debrisGain.gain.exponentialRampToValueAtTime(0.0001, now + debrisDuration);
+
+    debrisSource.connect(debrisFilter);
+    debrisFilter.connect(debrisGain);
+    debrisGain.connect(audioDestination(audio));
+    debrisSource.start(now);
+    debrisSource.stop(now + debrisDuration + 0.03);
+}
+
+function playLifeLostSound() {
+    const audio = initAudio();
+    if (!audio || audio.state !== 'running') return;
+
+    const nowMs = performance.now();
+    if (nowMs - lastLifeLostAt < LIFE_LOST_COOLDOWN) return;
+    lastLifeLostAt = nowMs;
+
+    const now = audio.currentTime;
+    const duration = 0.26;
+
+    const tone = audio.createOscillator();
+    const toneGain = audio.createGain();
+    const filter = audio.createBiquadFilter();
+
+    tone.type = 'sawtooth';
+    tone.frequency.setValueAtTime(420, now);
+    tone.frequency.exponentialRampToValueAtTime(170, now + duration);
+    filter.type = 'lowpass';
+    filter.frequency.value = 1500;
+    toneGain.gain.setValueAtTime(0.0001, now);
+    toneGain.gain.exponentialRampToValueAtTime(0.10, now + 0.012);
+    toneGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    tone.connect(filter);
+    filter.connect(toneGain);
+    toneGain.connect(audioDestination(audio));
+    tone.start(now);
+    tone.stop(now + duration + 0.02);
+
+    const lowTone = audio.createOscillator();
+    const lowGain = audio.createGain();
+    lowTone.type = 'triangle';
+    lowTone.frequency.setValueAtTime(165, now + 0.08);
+    lowTone.frequency.exponentialRampToValueAtTime(90, now + 0.23);
+    lowGain.gain.setValueAtTime(0.0001, now + 0.08);
+    lowGain.gain.exponentialRampToValueAtTime(0.08, now + 0.095);
+    lowGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    lowTone.connect(lowGain);
+    lowGain.connect(audioDestination(audio));
+    lowTone.start(now + 0.08);
+    lowTone.stop(now + 0.28);
+}
+
+function playGameOverSound() {
+    const audio = initAudio();
+    if (!audio || audio.state !== 'running') return;
+
+    const now = audio.currentTime;
+    const duration = 1.05;
+    const notes = [
+        { start: 420, end: 180, delay: 0.00, volume: 0.13 },
+        { start: 300, end: 95, delay: 0.18, volume: 0.14 }
+    ];
+
+    notes.forEach(note => {
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+        const filter = audio.createBiquadFilter();
+
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(note.start, now + note.delay);
+        oscillator.frequency.exponentialRampToValueAtTime(note.end, now + note.delay + 0.55);
+        filter.type = 'lowpass';
+        filter.frequency.value = 1300;
+        gain.gain.setValueAtTime(0.0001, now + note.delay);
+        gain.gain.exponentialRampToValueAtTime(note.volume, now + note.delay + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + note.delay + 0.72);
+
+        oscillator.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioDestination(audio));
+        oscillator.start(now + note.delay);
+        oscillator.stop(now + note.delay + 0.76);
+    });
+
+    const thud = audio.createOscillator();
+    const thudGain = audio.createGain();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(105, now + 0.36);
+    thud.frequency.exponentialRampToValueAtTime(42, now + duration);
+    thudGain.gain.setValueAtTime(0.0001, now + 0.36);
+    thudGain.gain.exponentialRampToValueAtTime(0.15, now + 0.38);
+    thudGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    thud.connect(thudGain);
+    thudGain.connect(audioDestination(audio));
+    thud.start(now + 0.36);
+    thud.stop(now + duration + 0.03);
+}
+
 function resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = window.innerWidth * dpr;
@@ -535,7 +667,6 @@ const gameWidth = () => window.innerWidth;
 const gameHeight = () => window.innerHeight;
 
 function goToScreen(n) {
-    initAudio(); // Ensure web audio resumes on screen navigation
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const next = document.getElementById(`screen${n}`);
     if (next) next.classList.add('active');
@@ -549,6 +680,7 @@ function goToScreen(n) {
 goToScreen(1);
 
 function selectDifficulty(level) {
+    initAudio();
     selectedDifficulty = level;
     const icons = { easy: 'Orange', medium: 'Pear', hard: 'Bomb' };
     document.getElementById('levelIcon').src = `assets/${icons[level]}.png`;
@@ -565,8 +697,16 @@ function startCountdown() {
 
 function startGame() {
     stopGameTimers();
-    score = 0; lives = 3; nextEasyBombAt = 20;
-    fruits = []; halves = []; splashes = []; sliceTrail = [];
+    score = 0;
+    lives = 3;
+    nextEasyBombAt = 20;
+    fruits = [];
+    halves = [];
+    splashes = [];
+    sliceTrail = [];
+    lastAudioSlicePoint = null;
+    lastSwishAt = 0;
+    lastLifeLostAt = 0;
     document.getElementById('scoreValue').textContent = score;
     updateLives();
     gameRunning = true;
@@ -630,9 +770,11 @@ function spawnFruit() {
     });
 }
 
-let pointerIsDown = false, lastPointerPoint = null;
+let pointerIsDown = false;
+let lastPointerPoint = null;
 
 window.addEventListener('pointerdown', e => {
+    initAudio();
     if (!gameRunning) return;
     if (e.target.closest('button')) return;
     pointerIsDown = true;
@@ -647,7 +789,11 @@ window.addEventListener('pointermove', e => {
     lastPointerPoint = p;
 }, { passive: true });
 
-function stopPointerSlice() { pointerIsDown = false; lastPointerPoint = null; }
+function stopPointerSlice() {
+    pointerIsDown = false;
+    lastPointerPoint = null;
+    lastAudioSlicePoint = null;
+}
 window.addEventListener('pointerup', stopPointerSlice, { passive: true });
 window.addEventListener('pointercancel', stopPointerSlice, { passive: true });
 window.addEventListener('pointerleave', stopPointerSlice, { passive: true });
@@ -664,7 +810,7 @@ function addSliceSegment(start, end) {
 
 function addSlicePoint(x, y) {
     if (!gameRunning) return;
-    playSwishSound(); // Trigger air slice sound
+    handleSwordMovement(x, y);
     sliceTrail.push({ x, y, life: 16 });
     if (sliceTrail.length > 35) sliceTrail.shift();
     checkSlice(x, y);
@@ -683,15 +829,20 @@ function sliceFruit(fruit) {
     fruit.sliced = true;
 
     if (fruit.isBomb) {
-        playBombExplosionSound(); // Play explosion audio
-        if (selectedDifficulty === 'easy') { lives--; updateLives(); }
+        playBombExplosion();
+
+        if (selectedDifficulty === 'easy') {
+            lives--;
+            updateLives();
+        }
+
         const ends = selectedDifficulty !== 'easy' || lives <= 0;
         showKaboom(ends);
         if (ends) setTimeout(gameOver, 900);
         return;
     }
 
-    playFruitSliceSound(); // Play fruit slice audio
+    playSwordStrike();
     score += 10;
     document.getElementById('scoreValue').textContent = score;
 
@@ -775,7 +926,6 @@ async function setupMediaPipe() {
         mediaPipeReady = true;
         setHandStatus('Camera on — show your hand', 'warning');
         setTimeout(checkHandTrackingHealth, 6000);
-
     } catch (error) {
         console.error('Camera / MediaPipe error:', error);
         mediaPipeReady = false;
@@ -798,6 +948,7 @@ function checkHandTrackingHealth() {
     if (lastHandSeenAt === 0 || secs > 6) {
         setHandStatus('No hand detected — check lighting/distance, or use mouse/touch', 'warning');
         smoothedHandPoint = null;
+        lastAudioSlicePoint = null;
     }
     setTimeout(checkHandTrackingHealth, 4000);
 }
@@ -872,8 +1023,8 @@ function updateWholeFruits() {
 
         if (fruit.y > gameHeight() + 120) {
             if (!fruit.isBomb && selectedDifficulty !== 'easy') {
-                playLifeLostSound(); // Play sound when fruit is dropped
                 lives--;
+                playLifeLostSound();
                 updateLives();
                 if (lives <= 0) gameOver();
             }
@@ -962,9 +1113,10 @@ function showKaboom(ending) {
 
 function gameOver() {
     if (!gameRunning) return;
+
+    playGameOverSound();
     gameRunning = false;
     stopGameTimers();
-    playGameOverSound(); // Play game over fanfare
 
     if (score > bestScore) {
         bestScore = score;
@@ -976,7 +1128,9 @@ function gameOver() {
     ctx.clearRect(0, 0, gameWidth(), gameHeight());
     updateLives(3);
     goToScreen(6);
-    gameOverTimer = setTimeout(() => { if (currentScreen === 6) showScoreScreen(); }, 2200);
+    gameOverTimer = setTimeout(() => {
+        if (currentScreen === 6) showScoreScreen();
+    }, 2200);
 }
 
 function showScoreScreen() {
@@ -991,9 +1145,14 @@ function quitGame() {
 
 function restartGame() {
     stopGameTimers();
-    score = 0; lives = 3;
+    score = 0;
+    lives = 3;
     selectedDifficulty = null;
-    fruits = []; halves = []; splashes = []; sliceTrail = [];
+    fruits = [];
+    halves = [];
+    splashes = [];
+    sliceTrail = [];
+    lastAudioSlicePoint = null;
     ctx.clearRect(0, 0, gameWidth(), gameHeight());
     document.getElementById('scoreValue').textContent = '0';
     updateLives();
