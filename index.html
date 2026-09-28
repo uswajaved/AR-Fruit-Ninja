@@ -100,7 +100,6 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .diff-btn:hover .t-select, .diff-btn:focus-visible .t-select { display:none; }
 .diff-btn:hover .t-play, .diff-btn:focus-visible .t-play { display:inline; }
 
-/* Responsive / scrollable difficulty screen */
 #screen2 .s2-logo, #screen2 .s2-subtitle { flex-shrink:0; }
 
 @media (max-width: 1200px) {
@@ -163,7 +162,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .pill-primary { color:#fff; border:none; background:linear-gradient(90deg,#FFD478,#F0B429); }
 .pill-ghost { color:#F3B734; border:1px solid #F3B734; background:linear-gradient(90deg,rgba(255,236,190,.95),rgba(249,222,165,.95)); }
 
-/* KABOOM: 10% larger than viewport */
+/* KABOOM */
 #kaboomEffect { position:absolute; inset:0; z-index:15; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.4); pointer-events:none; overflow:hidden; }
 #kaboomEffect.show { display:flex; animation:kaboomFade .9s ease-out forwards; }
 #kaboomEffect img { width:110vw; height:110vh; max-width:none; max-height:none; object-fit:contain; animation:kaboomPop .9s ease-out forwards; }
@@ -295,6 +294,194 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"></script>
 
 <script>
+/* =========================================================
+   WEB AUDIO API SOUND ENGINE
+   ========================================================= */
+let audioCtx = null;
+let lastSwishTime = 0;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+// Unlock audio context on any first touch or click
+window.addEventListener('pointerdown', initAudio, { once: true });
+
+function playSwishSound() {
+    if (!audioCtx) return;
+    const now = Date.now();
+    if (now - lastSwishTime < 110) return; // Debounce swish frequency
+    lastSwishTime = now;
+
+    const bufferSize = audioCtx.sampleRate * 0.12; // 120ms
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(1800, audioCtx.currentTime + 0.08);
+    filter.Q.value = 3;
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.11);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    noise.start();
+}
+
+function playFruitSliceSound() {
+    if (!audioCtx) return;
+
+    // 1. Sharp cut pop
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600 + Math.random() * 200, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.09);
+
+    oscGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.09);
+
+    osc.connect(oscGain);
+    oscGain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.09);
+
+    // 2. Juicy squish noise burst
+    const bufferSize = audioCtx.sampleRate * 0.15;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2500, audioCtx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.15);
+
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(audioCtx.destination);
+
+    noise.start();
+}
+
+function playBombExplosionSound() {
+    if (!audioCtx) return;
+
+    // Deep pitch drop sine wave
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.6);
+
+    oscGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+
+    osc.connect(oscGain);
+    oscGain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.6);
+
+    // Blast noise buffer
+    const bufferSize = audioCtx.sampleRate * 0.5;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(audioCtx.destination);
+
+    noise.start();
+}
+
+function playLifeLostSound() {
+    if (!audioCtx) return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.25);
+
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.25);
+}
+
+function playGameOverSound() {
+    if (!audioCtx) return;
+
+    const notes = [220, 196, 174, 130];
+    notes.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.15);
+
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime + idx * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + idx * 0.15 + 0.2);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(audioCtx.currentTime + idx * 0.15);
+        osc.stop(audioCtx.currentTime + idx * 0.15 + 0.2);
+    });
+}
+
+/* =========================================================
+   GAME ENGINE & LOGIC
+   ========================================================= */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const video = document.getElementById('webcam');
@@ -348,6 +535,7 @@ const gameWidth = () => window.innerWidth;
 const gameHeight = () => window.innerHeight;
 
 function goToScreen(n) {
+    initAudio(); // Ensure web audio resumes on screen navigation
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const next = document.getElementById(`screen${n}`);
     if (next) next.classList.add('active');
@@ -476,6 +664,7 @@ function addSliceSegment(start, end) {
 
 function addSlicePoint(x, y) {
     if (!gameRunning) return;
+    playSwishSound(); // Trigger air slice sound
     sliceTrail.push({ x, y, life: 16 });
     if (sliceTrail.length > 35) sliceTrail.shift();
     checkSlice(x, y);
@@ -494,6 +683,7 @@ function sliceFruit(fruit) {
     fruit.sliced = true;
 
     if (fruit.isBomb) {
+        playBombExplosionSound(); // Play explosion audio
         if (selectedDifficulty === 'easy') { lives--; updateLives(); }
         const ends = selectedDifficulty !== 'easy' || lives <= 0;
         showKaboom(ends);
@@ -501,6 +691,7 @@ function sliceFruit(fruit) {
         return;
     }
 
+    playFruitSliceSound(); // Play fruit slice audio
     score += 10;
     document.getElementById('scoreValue').textContent = score;
 
@@ -676,12 +867,12 @@ function updateWholeFruits() {
         fruit.vy += gravity;
         fruit.rotation += fruit.rotationSpeed;
 
-        /* Bomb is displayed 30% smaller than normal fruits. */
         const displayHeight = fruit.isBomb ? fruitHeight * 0.7 : fruitHeight;
         drawImageFixedHeight(fruit.img, fruit.x, fruit.y, displayHeight, fruit.rotation);
 
         if (fruit.y > gameHeight() + 120) {
             if (!fruit.isBomb && selectedDifficulty !== 'easy') {
+                playLifeLostSound(); // Play sound when fruit is dropped
                 lives--;
                 updateLives();
                 if (lives <= 0) gameOver();
@@ -773,6 +964,7 @@ function gameOver() {
     if (!gameRunning) return;
     gameRunning = false;
     stopGameTimers();
+    playGameOverSound(); // Play game over fanfare
 
     if (score > bestScore) {
         bestScore = score;
