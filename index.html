@@ -46,6 +46,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#f
 #screen4, #screen5 { background:transparent; }
 #screen6 { background:rgba(0,0,0,.4); }
 #screen7 { background:rgba(0,0,0,.7); }
+#screen8 { z-index:25; background:transparent; }
 h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .main-title {
     font-size:clamp(3rem,7vw,5rem);
@@ -54,19 +55,27 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     margin-bottom:20px; filter:drop-shadow(4px 4px 0 rgba(0,0,0,.45));
 }
 
-/* BUTTONS */
+/* GENERIC BUTTON (kept for difficulty cards) */
 .btn {
     padding:15px 40px; font-family:'Gang of Three', cursive; font-size:1.5rem;
     border:3px solid var(--easy-color); color:var(--easy-color); background:rgba(0,0,0,.7);
     cursor:pointer; transition:background .2s ease, color .2s ease, transform .2s ease; margin-top:20px;
 }
 .btn:hover { background:var(--easy-color); color:#000; transform:scale(1.03); }
-.btn-play { border-color:var(--main-grad-2); color:var(--main-grad-2); }
-.btn-play:hover { background:var(--main-grad-2); color:#000; }
+
+/* ===== ROTATING RING BUTTONS (Tap to Play / Settings / Retry / Quit / Back) ===== */
+.ring-btn { cursor:pointer; }
+.ring-btn img { display:block; width:100%; height:100%; object-fit:contain; animation:ringSpin 16s linear infinite; }
+.ring-btn:hover img { animation-play-state:paused; }
+@keyframes ringSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+.ring-play, .ring-settings { width:170px; height:170px; }
+.ring-retry, .ring-quit { width:150px; height:150px; }
+.ring-back { width:130px; height:130px; margin-top:36px; }
 
 /* START SCREEN */
-#screen1 img { height:220px; width:auto; max-width:100%; object-fit:contain; margin-bottom:30px; }
-#screen1 p { font-size:1.2rem; margin-top:15px; color:#eee; text-shadow:2px 2px 3px #000; }
+#screen1 img.logo { height:220px; width:auto; max-width:100%; object-fit:contain; margin-bottom:30px; }
+.s1-instructions { font-size:1.15rem; margin-top:5px; margin-bottom:35px; color:#eee; text-shadow:2px 2px 3px #000; line-height:1.6; }
+.start-actions { display:flex; gap:50px; flex-wrap:wrap; justify-content:center; }
 
 /* ===== DIFFICULTY (screen 2) ===== */
 .s2-logo { height:130px; width:auto; max-width:100%; object-fit:contain; margin-bottom:10px; }
@@ -119,6 +128,8 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     .diff-sub { font-size:1.2rem; }
     .diff-card ul { min-height:auto; margin-bottom:18px; font-size:.95rem; }
     .diff-btn { width:min(240px, 100%); font-size:1.55rem; }
+    .ring-play, .ring-settings { width:130px; height:130px; }
+    .start-actions { gap:30px; }
 }
 
 @media (max-height: 700px) and (min-width: 761px) {
@@ -147,21 +158,50 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .life-icon:nth-child(2) { width:40px; height:40px; }
 .life-icon:nth-child(3) { width:50px; height:50px; }
 
+/* PLAY / PAUSE CONTROL (bottom-left, only during gameplay) */
+.game-controls { position:absolute; bottom:30px; left:30px; z-index:20; display:none; }
+.game-controls.active { display:block; }
+.control-btn { width:70px; height:70px; border:none; padding:0; background:transparent; cursor:pointer; }
+.control-btn img { width:100%; height:100%; object-fit:contain; display:block; }
+.control-btn:hover { transform:scale(1.05); }
+
 /* READY / GO / GAME OVER */
 #screen4 h1, #screen5 h1, #screen6 h1 { font-size:clamp(5rem,12vw,8rem); line-height:1.1; padding:0 .1em; filter:drop-shadow(4px 4px 6px rgba(0,0,0,.45)); }
 #screen4 h1 { color:var(--main-grad-1); }
 #screen5 h1 { background:linear-gradient(to bottom, #DCE44C, #9CA411); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
 #screen6 h1 { background:linear-gradient(to bottom, #F86D5B, #E24D39); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
 
-/* SCORE */
-.score-panel { width:min(750px,90vw); padding:60px 20px 50px; background:rgba(0,0,0,.7); border-radius:40px; }
-.score-title { font-size:clamp(3rem,7vw,4.5rem); line-height:1; background:linear-gradient(to bottom,#FFD478,#F0B429); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.score-display { font-family:'Gang of Three'; font-size:clamp(5rem,12vw,8rem); line-height:1; margin-top:40px; background:linear-gradient(to bottom,#FFD478,#F0B429); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.score-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:32px; align-items:center; margin-top:44px; }
-.pill-btn { display:flex; align-items:center; justify-content:center; width:300px; height:72px; padding:0; font-family:'Royal Avenue Demo', sans-serif; font-size:2rem; letter-spacing:1px; border-radius:999px; cursor:pointer; transition:transform .2s ease, filter .2s ease; }
-.pill-btn:hover { transform:scale(1.05); filter:brightness(1.05); }
-.pill-primary { color:#fff; border:none; background:linear-gradient(90deg,#FFD478,#F0B429); }
-.pill-ghost { color:#F3B734; border:1px solid #F3B734; background:linear-gradient(90deg,rgba(255,236,190,.95),rgba(249,222,165,.95)); }
+/* SCORE PANEL (wood scroll artwork with score text overlaid) */
+.score-panel, .audio-panel { position:relative; width:min(650px,88vw); }
+.score-panel-bg, .audio-panel-bg { width:100%; height:auto; display:block; }
+.score-panel-content, .audio-panel-content {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:6% 10% 8%;
+}
+.score-title, .audio-title {
+    font-size:clamp(2.2rem,6vw,3.2rem); line-height:1;
+    background:linear-gradient(to bottom,#FFD478,#F0B429);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
+    filter:drop-shadow(2px 2px 0 rgba(60,35,10,.55));
+}
+.score-display {
+    font-family:'Gang of Three'; font-size:clamp(3rem,9vw,5rem); line-height:1; margin-top:6%;
+    background:linear-gradient(to bottom,#FFD478,#F0B429);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
+}
+.score-actions { display:flex; gap:40px; flex-wrap:wrap; justify-content:center; margin-top:36px; }
+
+/* AUDIO / SETTINGS SCREEN */
+.audio-toggles { display:flex; gap:24px; margin-top:8%; }
+.toggle-square {
+    width:64px; height:64px; border:none; border-radius:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 3px 0 rgba(0,0,0,.25); transition:transform .15s ease;
+}
+.toggle-square:hover { transform:scale(1.06); }
+.toggle-square img { width:58%; height:58%; object-fit:contain; }
+.toggle-sound { background:linear-gradient(160deg,#b98cf0,#7c3aed); }
+.toggle-music { background:linear-gradient(160deg,#ffcf6e,#f08a1c); }
 
 /* KABOOM: 10% larger than viewport */
 #kaboomEffect { position:absolute; inset:0; z-index:15; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.4); pointer-events:none; overflow:hidden; }
@@ -208,14 +248,32 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     </div>
 </div>
 
-<!-- START -->
-<div id="screen1" class="screen active">
-    <img src="assets/Logo.png" alt="Fruit Ninja">
-    <button class="pill-btn pill-primary" onclick="goToScreen(2)">TAP TO PLAY</button>
-    <p>WAVE YOUR HAND TO SLICE OR USE MOUSE TO SLICE</p>
+<!-- PLAY / PAUSE (gameplay only) -->
+<div id="gameControls" class="game-controls">
+    <button class="control-btn" onclick="togglePause()">
+        <img id="pauseIcon" src="assets/Pause.png" alt="Pause">
+    </button>
 </div>
 
-<!-- DIFFICULTY -->
+<!-- ================= START ================= -->
+<div id="screen1" class="screen active">
+    <img class="logo" src="assets/Logo.png" alt="Fruit Ninja">
+    <p class="s1-instructions">
+        WAVE YOUR HAND TO SLICE<br>
+        OR<br>
+        USE MOUSE TO SLICE
+    </p>
+    <div class="start-actions">
+        <div class="ring-btn ring-play" onclick="goToScreen(2)">
+            <img src="assets/TAP_HERER_TO_PLAY.png" alt="Tap here to play">
+        </div>
+        <div class="ring-btn ring-settings" onclick="goToScreen(8)">
+            <img src="assets/SETTINGS.png" alt="Settings">
+        </div>
+    </div>
+</div>
+
+<!-- ================= DIFFICULTY ================= -->
 <div id="screen2" class="screen">
     <img class="s2-logo" src="assets/Logo.png" alt="Fruit Ninja">
     <p class="s2-subtitle">CHOOSE YOUR DIFFICULTY</p>
@@ -274,18 +332,48 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     </div>
 </div>
 
-<!-- READY / GO / GAME OVER / SCORE -->
+<!-- READY / GO / GAME OVER -->
 <div id="screen4" class="screen"><h1>READY</h1></div>
 <div id="screen5" class="screen"><h1>GO!</h1></div>
 <div id="screen6" class="screen"><h1>GAME OVER!</h1></div>
+
+<!-- ================= SCORE ================= -->
 <div id="screen7" class="screen">
     <div class="score-panel">
-        <h2 class="score-title">SCORE</h2>
-        <div class="score-display" id="finalScore">0</div>
+        <img class="score-panel-bg" src="assets/Background__2_.png" alt="">
+        <div class="score-panel-content">
+            <h2 class="score-title">SCORE</h2>
+            <div class="score-display" id="finalScore">0</div>
+        </div>
     </div>
     <div class="score-actions">
-        <button class="pill-btn pill-primary" onclick="restartGame()">PLAY AGAIN</button>
-        <button class="pill-btn pill-ghost" onclick="quitGame()">QUIT</button>
+        <div class="ring-btn ring-retry" onclick="restartGame()">
+            <img src="assets/RETRY.png" alt="Retry">
+        </div>
+        <div class="ring-btn ring-quit" onclick="quitGame()">
+            <img src="assets/QUIT.png" alt="Quit">
+        </div>
+    </div>
+</div>
+
+<!-- ================= AUDIO / SETTINGS ================= -->
+<div id="screen8" class="screen">
+    <div class="audio-panel">
+        <img class="audio-panel-bg" src="assets/Background__2_.png" alt="">
+        <div class="audio-panel-content">
+            <h2 class="audio-title">AUDIO</h2>
+            <div class="audio-toggles">
+                <button class="toggle-square toggle-sound" onclick="toggleSound()">
+                    <img id="soundIcon" src="assets/Sound_on.png" alt="Sound">
+                </button>
+                <button class="toggle-square toggle-music" onclick="toggleMusic()">
+                    <img id="musicIcon" src="assets/Music_On.png" alt="Music">
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="ring-btn ring-back" onclick="goToScreen(1)">
+        <img src="assets/Back.png" alt="Back">
     </div>
 </div>
 
@@ -300,14 +388,36 @@ const ctx = canvas.getContext('2d');
 const video = document.getElementById('webcam');
 const overlay = document.getElementById('cameraOverlay');
 const hud = document.getElementById('hud');
+const gameControls = document.getElementById('gameControls');
 const kaboomEffect = document.getElementById('kaboomEffect');
 const handStatus = document.getElementById('handStatus');
 
 let currentScreen = 1, selectedDifficulty = null, score = 0, lives = 3;
-let gameRunning = false, gameAnimationId = null, spawnTimer = null, gameOverTimer = null;
+let gameRunning = false, paused = false, gameAnimationId = null, spawnTimer = null, gameOverTimer = null;
 let nextEasyBombAt = 20;
 let bestScore = Number(localStorage.getItem('fn_best_score')) || 0;
 document.getElementById('bestScore').textContent = bestScore;
+
+/* ===== AUDIO / SOUND & MUSIC TOGGLES ===== */
+let soundEnabled = localStorage.getItem('fn_sound') !== 'off';
+let musicEnabled = localStorage.getItem('fn_music') !== 'off';
+
+function updateAudioIcons() {
+    document.getElementById('soundIcon').src = soundEnabled ? 'assets/Sound_on.png' : 'assets/Sound_off.png';
+    document.getElementById('musicIcon').src = musicEnabled ? 'assets/Music_On.png' : 'assets/Music_Off.png';
+}
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem('fn_sound', soundEnabled ? 'on' : 'off');
+    updateAudioIcons();
+}
+function toggleMusic() {
+    musicEnabled = !musicEnabled;
+    localStorage.setItem('fn_music', musicEnabled ? 'on' : 'off');
+    updateAudioIcons();
+    /* Background music hookup goes here once the track is added. */
+}
+updateAudioIcons();
 
 const fruitTypes = ['Apple', 'Lemon', 'Banana', 'Orange', 'Pear'];
 const assets = { Bomb: { whole: 'assets/Bomb.png' } };
@@ -341,6 +451,7 @@ let fruits = [], halves = [], splashes = [], sliceTrail = [];
    - Bomb explosion: when a bomb is sliced
    - Life lost: when fruit is missed on Medium/Hard
    - Game over: when the round ends
+   All gated by soundEnabled (the speaker toggle on the Audio screen).
    ========================================================= */
 let audioContext = null;
 let masterGain = null;
@@ -390,6 +501,7 @@ function createNoiseBuffer(audio, duration, envelopeFn) {
 }
 
 function playSwordSwish(speed = 1) {
+    if (!soundEnabled) return;
     const audio = initAudio();
     if (!audio || audio.state !== 'running') return;
 
@@ -458,6 +570,7 @@ function handleSwordMovement(x, y) {
 }
 
 function playSwordStrike() {
+    if (!soundEnabled) return;
     const audio = initAudio();
     if (!audio || audio.state !== 'running') return;
 
@@ -505,6 +618,7 @@ function playSwordStrike() {
 }
 
 function playBombExplosion() {
+    if (!soundEnabled) return;
     const audio = initAudio();
     if (!audio || audio.state !== 'running') return;
 
@@ -564,6 +678,7 @@ function playBombExplosion() {
 }
 
 function playLifeLostSound() {
+    if (!soundEnabled) return;
     const audio = initAudio();
     if (!audio || audio.state !== 'running') return;
 
@@ -608,6 +723,7 @@ function playLifeLostSound() {
 }
 
 function playGameOverSound() {
+    if (!soundEnabled) return;
     const audio = initAudio();
     if (!audio || audio.state !== 'running') return;
 
@@ -666,6 +782,9 @@ resizeCanvas();
 const gameWidth = () => window.innerWidth;
 const gameHeight = () => window.innerHeight;
 
+/* ===== SCREEN MANAGEMENT =====
+   1 start, 2 difficulty, 3 gameplay (canvas only, no div), 4 ready, 5 go,
+   6 game over, 7 score, 8 audio/settings */
 function goToScreen(n) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const next = document.getElementById(`screen${n}`);
@@ -674,7 +793,9 @@ function goToScreen(n) {
     overlay.classList.toggle('visible', n === 1);
     hud.classList.toggle('active', n === 3 || n === 6);
     hud.classList.toggle('faded', n === 6);
-    handStatus.classList.toggle('show', n !== 2);
+    gameControls.classList.toggle('active', n === 3);
+    handStatus.classList.toggle('show', ![2, 7, 8].includes(n));
+    if (n === 8) updateAudioIcons();
     if (n !== 3) ctx.clearRect(0, 0, gameWidth(), gameHeight());
 }
 goToScreen(1);
@@ -699,6 +820,7 @@ function startGame() {
     stopGameTimers();
     score = 0;
     lives = 3;
+    paused = false;
     nextEasyBombAt = 20;
     fruits = [];
     halves = [];
@@ -708,11 +830,28 @@ function startGame() {
     lastSwishAt = 0;
     lastLifeLostAt = 0;
     document.getElementById('scoreValue').textContent = score;
+    document.getElementById('pauseIcon').src = 'assets/Pause.png';
     updateLives();
     gameRunning = true;
     goToScreen(3);
     scheduleNextFruit();
     gameLoop();
+}
+
+/* ===== PLAY / PAUSE ===== */
+function togglePause() {
+    if (!gameRunning) return;
+    paused = !paused;
+    document.getElementById('pauseIcon').src = paused ? 'assets/Play.png' : 'assets/Pause.png';
+
+    if (paused) {
+        if (gameAnimationId) { cancelAnimationFrame(gameAnimationId); gameAnimationId = null; }
+        if (spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; }
+        lastAudioSlicePoint = null;
+    } else {
+        gameLoop();
+        scheduleNextFruit();
+    }
 }
 
 function speedFactor() {
@@ -727,7 +866,7 @@ function spawnWave() {
 }
 
 function scheduleNextFruit() {
-    if (!gameRunning) return;
+    if (!gameRunning || paused) return;
     let delay = 1800;
     if (selectedDifficulty === 'medium') delay = 1200;
     if (selectedDifficulty === 'hard') delay = 1600;
@@ -738,7 +877,7 @@ function scheduleNextFruit() {
 }
 
 function spawnFruit() {
-    if (!gameRunning) return;
+    if (!gameRunning || paused) return;
 
     let isBomb;
     if (selectedDifficulty === 'easy') {
@@ -775,15 +914,15 @@ let lastPointerPoint = null;
 
 window.addEventListener('pointerdown', e => {
     initAudio();
-    if (!gameRunning) return;
-    if (e.target.closest('button')) return;
+    if (!gameRunning || paused) return;
+    if (e.target.closest('button, .ring-btn')) return;
     pointerIsDown = true;
     lastPointerPoint = { x: e.clientX, y: e.clientY };
     addSlicePoint(e.clientX, e.clientY);
 }, { passive: true });
 
 window.addEventListener('pointermove', e => {
-    if (!gameRunning || !pointerIsDown) return;
+    if (!gameRunning || paused || !pointerIsDown) return;
     const p = { x: e.clientX, y: e.clientY };
     addSliceSegment(lastPointerPoint, p);
     lastPointerPoint = p;
@@ -809,7 +948,7 @@ function addSliceSegment(start, end) {
 }
 
 function addSlicePoint(x, y) {
-    if (!gameRunning) return;
+    if (!gameRunning || paused) return;
     handleSwordMovement(x, y);
     sliceTrail.push({ x, y, life: 16 });
     if (sliceTrail.length > 35) sliceTrail.shift();
@@ -817,7 +956,7 @@ function addSlicePoint(x, y) {
 }
 
 function checkSlice(x, y) {
-    if (!gameRunning) return;
+    if (!gameRunning || paused) return;
     for (const fruit of fruits) {
         if (fruit.sliced) continue;
         if (Math.hypot(fruit.x - x, fruit.y - y) <= fruit.radius + 25) sliceFruit(fruit);
@@ -969,7 +1108,7 @@ function onHandsResults(results) {
     lastHandSeenAt = Date.now();
     setHandStatus('Hand tracking ✓', 'tracking');
 
-    if (!gameRunning) return;
+    if (!gameRunning || paused) return;
 
     const indexTip = results.multiHandLandmarks[0][8];
     const raw = handPointToScreen(indexTip);
@@ -998,13 +1137,13 @@ function updateLives(count = lives) {
 }
 
 function gameLoop() {
-    if (!gameRunning) return;
+    if (!gameRunning || paused) return;
     ctx.clearRect(0, 0, gameWidth(), gameHeight());
     updateWholeFruits();
     updateHalves();
     drawSplashes();
     drawSliceTrail();
-    if (gameRunning) gameAnimationId = requestAnimationFrame(gameLoop);
+    if (gameRunning && !paused) gameAnimationId = requestAnimationFrame(gameLoop);
 }
 
 function updateWholeFruits() {
@@ -1116,6 +1255,7 @@ function gameOver() {
 
     playGameOverSound();
     gameRunning = false;
+    paused = false;
     stopGameTimers();
 
     if (score > bestScore) {
@@ -1147,6 +1287,7 @@ function restartGame() {
     stopGameTimers();
     score = 0;
     lives = 3;
+    paused = false;
     selectedDifficulty = null;
     fruits = [];
     halves = [];
