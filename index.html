@@ -45,7 +45,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#000; color:#f
 #screen1, #screen7 { z-index:10; }
 #screen4, #screen5 { background:transparent; }
 #screen6 { background:rgba(0,0,0,.4); }
-#screen7 { background:rgba(0,0,0,.7); }
+#screen7 { background:transparent; }
 #screen8 { z-index:25; background:transparent; }
 h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .main-title {
@@ -840,7 +840,7 @@ dropSoundSrc.preload = 'auto';
 function playDropSound() {
     if (!soundEnabled) return;
     const s = dropSoundSrc.cloneNode();
-    s.volume = 0.5;
+    s.volume = 0.22;
     s.play().catch(() => {});
 }
 
@@ -1142,7 +1142,7 @@ function sliceFruit(fruit) {
     comboTimer = setTimeout(finalizeCombo, 450);
 
     const a = assets[fruit.name];
-    splashes.push({ img: getImage(a.splash), x: fruit.x, y: fruit.y, life: 90, maxLife: 90 });
+    splashes.push({ img: getImage(a.splash), x: fruit.x, y: fruit.y, life: 150, maxLife: 150 });
 
     halves.push({
         img: getImage(a.slice1), x: fruit.x - 10, y: fruit.y,
