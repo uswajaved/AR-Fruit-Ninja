@@ -394,8 +394,16 @@ const fruitSizeConfig = {
 };
 const bombSizeConfig = { height:70, collision:35 };
 
-function spawnPopup(text, x, y, bonus = 0) { popups.push({ text, bonus, x, y, life: 70, maxLife: 70 }); }
-function finalizeCombo() { if (comboCount >= 3) spawnPopup(`${comboCount} FRUIT COMBO`, comboX, comboY); comboCount = 0; }
+function spawnPopup(text, x, y, bonus = 0, type = 'normal') {
+    popups.push({ text, bonus, type, x, y, life: 80, maxLife: 80 });
+}
+
+function finalizeCombo() {
+    if (comboCount >= 3) {
+        spawnPopup(`FRUIT COMBO +${comboCount}`, comboX, comboY, comboCount * 10, 'combo');
+    }
+    comboCount = 0;
+}
 
 /* ========================================================= WEB AUDIO API ========================================================= */
 let audioContext = null, masterGain = null, lastSwishAt = 0, lastAudioSlicePoint = null, lastLifeLostAt = 0;
@@ -642,8 +650,15 @@ function togglePause() {
 
 function speedFactor() { if (selectedDifficulty === 'easy') return 1; return Math.min(1.6, 1 + Math.floor(score / 10) * 0.03); }
 function spawnWave() {
-    let count = Math.floor(Math.random() * 3) + 3; // 3-5 fruits together
-    for (let i = 0; i < count; i++) setTimeout(spawnFruit, i * 120);
+    // Rare special combo wave (normal gameplay remains original)
+    const comboWave = Math.random() < 0.12;
+
+    if (comboWave) {
+        const count = Math.floor(Math.random() * 3) + 3; // 3-5 fruits
+        for (let i = 0; i < count; i++) setTimeout(spawnFruit, i * 120);
+    } else {
+        spawnFruit();
+    }
 }
 function scheduleNextFruit() {
     if (!gameRunning || paused) return;
@@ -712,7 +727,7 @@ function checkSlice(x, y) {
         } else if (fruit.isBomb && !fruit.criticalDone) {
             if (lineIntersectsCircle(prevPoint.x, prevPoint.y, x, y, fruit.x, fruit.y, fruit.radius + 15)) {
                 fruit.criticalDone = true; score += 30; document.getElementById('scoreValue').textContent = score;
-                spawnPopup('CRITICAL', x, y - 10, 30); playCriticalSound();
+                spawnPopup('CRITICAL', x, y - 10, 30, 'critical'); playCriticalSound();
             }
         }
     }
@@ -739,7 +754,7 @@ function sliceFruit(fruit, sliceX1, sliceY1, sliceX2, sliceY2) {
     if (comboCount >= 2) {
         const bonuses = {2:25,3:40,4:60,5:100};
         sliceBonus = bonuses[Math.min(comboCount,5)] || 10;
-        spawnPopup(`${comboCount} FRUIT BONUS`, fruit.x, fruit.y - 70, sliceBonus);
+        spawnPopup(`FRUIT COMBO +${comboCount}`, fruit.x, fruit.y - 70, sliceBonus, 'combo');
     }
     score += sliceBonus; document.getElementById('scoreValue').textContent = score;
 
@@ -862,9 +877,43 @@ function drawPopups() {
         const progress = 1 - p.life / p.maxLife; const alpha = p.life > 14 ? 1 : p.life / 14; const riseY = p.y - progress * 46;
         ctx.save(); ctx.globalAlpha = alpha; ctx.translate(p.x, riseY); ctx.rotate(-0.05);
         if (plusIcon.complete && plusIcon.naturalWidth > 0) { const h = 26; const w = h * (plusIcon.naturalWidth / plusIcon.naturalHeight); ctx.drawImage(plusIcon, -w - 4, -34, w, h); }
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.font = "bold 28px 'Gang of Three', sans-serif";
-        ctx.lineWidth = 5; ctx.strokeStyle = '#16234a'; ctx.fillStyle = '#5B9CEF'; ctx.strokeText(p.text, 0, 0); ctx.fillText(p.text, 0, 0);
-        if (p.bonus) { ctx.font = "bold 22px 'Gang of Three', sans-serif"; ctx.strokeText('+' + p.bonus, 8, 27); ctx.fillStyle = '#8fc1ff'; ctx.fillText('+' + p.bonus, 8, 27); }
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+
+        // Combo and Critical are premium events and use the same large size
+        if (p.type === 'combo' || p.type === 'critical') {
+            ctx.font = "bold 48px 'Gang of Three', sans-serif";
+            ctx.lineWidth = 7;
+            ctx.strokeStyle = '#5b3a1c';
+
+            if (p.type === 'combo') {
+                ctx.fillStyle = '#FFD478';
+            } else {
+                ctx.fillStyle = '#FFD478';
+            }
+
+            ctx.strokeText(p.text, 0, 0);
+            ctx.fillText(p.text, 0, 0);
+
+            if (p.bonus) {
+                ctx.font = "bold 32px 'Gang of Three', sans-serif";
+                ctx.fillText('+' + p.bonus, 10, 38);
+            }
+
+        } else {
+            ctx.font = "bold 28px 'Gang of Three', sans-serif";
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#16234a';
+            ctx.fillStyle = '#5B9CEF';
+            ctx.strokeText(p.text, 0, 0);
+            ctx.fillText(p.text, 0, 0);
+
+            if (p.bonus) {
+                ctx.font = "bold 22px 'Gang of Three', sans-serif";
+                ctx.strokeText('+' + p.bonus, 8, 27);
+                ctx.fillStyle = '#8fc1ff';
+                ctx.fillText('+' + p.bonus, 8, 27);
+            }
+        }
         ctx.restore(); p.life--; return p.life > 0;
     });
 }
