@@ -67,7 +67,6 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .ring-btn { cursor:pointer; position:relative; }
 .ring-btn img { display:block; width:100%; height:100%; object-fit:contain; animation:ringSpin 16s linear infinite; }
 .ring-btn:hover img { animation-play-state:paused; }
-/* Shown only if the ring artwork 404s, so the button stays visible and usable */
 .ring-btn .ring-fallback { display:none; }
 .ring-btn.img-missing img { visibility:hidden; }
 .ring-btn.img-missing .ring-fallback {
@@ -126,7 +125,6 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .s2-back img { height:22px; width:auto; object-fit:contain; }
 .s2-back:hover { opacity:.85; }
 
-/* Responsive / scrollable difficulty screen */
 #screen2 .s2-logo, #screen2 .s2-subtitle { flex-shrink:0; }
 
 @media (max-width: 1200px) {
@@ -170,12 +168,22 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .hud-score { font-family:'Gang of Three'; font-size:2rem; line-height:1; background:linear-gradient(to bottom,#FFD478,#F0B429); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 .hud-best { font-size:1rem; color:var(--main-grad-1); }
 .hud-right { display:flex; align-items:flex-end; gap:10px; }
-.life-icon { object-fit:contain; }
+.life-icon { object-fit:contain; transition: filter 0.3s, opacity 0.3s, transform 0.3s; }
 .life-icon:nth-child(1) { width:30px; height:30px; }
 .life-icon:nth-child(2) { width:40px; height:40px; }
 .life-icon:nth-child(3) { width:50px; height:50px; }
 
-/* PLAY / PAUSE CONTROL (bottom-left, only during gameplay) */
+/* Lost Life Animation: Flash Red, then turn to Game Over color */
+.life-icon.lost-life {
+    animation: heartLost 0.8s ease-out forwards;
+}
+@keyframes heartLost {
+    0% { filter: none; opacity: 1; transform: scale(1); }
+    20% { filter: sepia(1) saturate(10) hue-rotate(-50deg); opacity: 1; transform: scale(1.4); } /* Bright Red */
+    100% { filter: grayscale(1) brightness(2); opacity: 0.4; transform: scale(1); } /* Game Over color */
+}
+
+/* PLAY / PAUSE CONTROL */
 .game-controls { position:absolute; bottom:30px; left:30px; z-index:20; display:none; }
 .game-controls.active { display:block; }
 .control-btn { width:70px; height:70px; border:none; padding:0; background:transparent; cursor:pointer; }
@@ -188,7 +196,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 #screen5 h1 { background:linear-gradient(to bottom, #DCE44C, #9CA411); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
 #screen6 h1 { background:linear-gradient(to bottom, #F86D5B, #E24D39); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; }
 
-/* SCORE PANEL (wood scroll artwork with score text overlaid) */
+/* SCORE PANEL */
 .score-panel, .audio-panel {
     position:relative; width:44vw; min-width:300px; max-width:820px; min-height:230px;
     border-radius:34px; overflow:hidden;
@@ -199,10 +207,8 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     align-items:center; justify-content:center; padding:6% 10% 8%;
 }
 .score-title-img, .audio-title-img { display:block; max-width:60%; height:auto; margin:0 auto; }
-/* Shown only if SCORE_Text.png / AUDIO_Text.png fail to load */
 .score-title, .audio-title {
-    display:none;
-    font-size:clamp(2.2rem,6vw,3.2rem); line-height:1;
+    display:none; font-size:clamp(2.2rem,6vw,3.2rem); line-height:1;
     background:linear-gradient(to bottom,#FFD478,#F0B429);
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
     -webkit-text-stroke:2px #5b3a1c; paint-order:stroke fill;
@@ -225,7 +231,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .toggle-square img { width:100%; height:100%; object-fit:contain; display:block; }
 .icon-fallback { font-size:1.7rem; line-height:1; }
 
-/* KABOOM: 10% larger than viewport */
+/* KABOOM */
 #kaboomEffect { position:absolute; inset:0; z-index:15; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.4); pointer-events:none; overflow:hidden; }
 #kaboomEffect.show { display:flex; animation:kaboomFade .9s ease-out forwards; }
 #kaboomEffect img { width:110vw; height:110vh; max-width:none; max-height:none; object-fit:contain; animation:kaboomPop .9s ease-out forwards; }
@@ -424,10 +430,6 @@ const hud = document.getElementById('hud');
 const gameControls = document.getElementById('gameControls');
 const kaboomEffect = document.getElementById('kaboomEffect');
 
-/* Runs when any game-asset <img> 404s: logs the exact missing path so it's
-   easy to match against the assets/ folder, and swaps in a usable fallback
-   instead of leaving a broken-image glyph on screen. */
-/* Runs if SCORE_Text.png / AUDIO_Text.png 404 — reveals the plain-text title instead. */
 function handleTitleImgError(img) {
     console.warn('Missing asset file — check assets/ for:', img.getAttribute('src'));
     img.style.display = 'none';
@@ -470,8 +472,6 @@ function updateAudioIcons() {
     musicIcon.style.display = '';
     soundIcon.parentElement.querySelectorAll('.icon-fallback').forEach(el => el.remove());
     musicIcon.parentElement.querySelectorAll('.icon-fallback').forEach(el => el.remove());
-    /* Kept in sync so that even the broken-image fallback glyph changes
-       between on/off — proof the toggle worked while a filename is fixed. */
     soundIcon.dataset.fallback = soundEnabled ? '🔊' : '🔇';
     musicIcon.dataset.fallback = musicEnabled ? '🎵' : '🔕';
     soundIcon.src = soundEnabled ? 'assets/Sound_on.png' : 'assets/Sound_off.png';
@@ -532,12 +532,6 @@ function finalizeCombo() {
 
 /* =========================================================
    WEB AUDIO API SOUND ENGINE
-   - Sword swish: while slicing/moving
-   - Sword strike: when a normal fruit is sliced
-   - Bomb explosion: when a bomb is sliced
-   - Life lost: when fruit is missed on Medium/Hard
-   - Game over: when the round ends
-   All gated by soundEnabled (the speaker toggle on the Audio screen).
    ========================================================= */
 let audioContext = null;
 let masterGain = null;
@@ -549,11 +543,7 @@ const LIFE_LOST_COOLDOWN = 180;
 
 function initAudio() {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-
-    if (!AudioContextClass) {
-        console.warn('Web Audio API is not supported in this browser.');
-        return null;
-    }
+    if (!AudioContextClass) return null;
 
     if (!audioContext || audioContext.state === 'closed') {
         audioContext = new AudioContextClass();
@@ -562,10 +552,12 @@ function initAudio() {
         masterGain.connect(audioContext.destination);
     }
 
+    // Resume immediately without blocking scheduling
     if (audioContext.state === 'suspended') {
         audioContext.resume().catch(err => console.warn('Audio resume failed:', err));
     }
-
+    
+    // Return context regardless of suspended state so we can schedule sounds instantly
     return audioContext;
 }
 
@@ -589,7 +581,7 @@ function createNoiseBuffer(audio, duration, envelopeFn) {
 function playSwordSwish(speed = 1) {
     if (!soundEnabled) return;
     const audio = initAudio();
-    if (!audio || audio.state !== 'running') return;
+    if (!audio) return;
 
     const nowMs = performance.now();
     if (nowMs - lastSwishAt < SWISH_COOLDOWN) return;
@@ -658,7 +650,7 @@ function handleSwordMovement(x, y) {
 function playSwordStrike() {
     if (!soundEnabled) return;
     const audio = initAudio();
-    if (!audio || audio.state !== 'running') return;
+    if (!audio) return;
 
     const now = audio.currentTime;
     const strikeDuration = 0.12;
@@ -706,7 +698,7 @@ function playSwordStrike() {
 function playBombExplosion() {
     if (!soundEnabled) return;
     const audio = initAudio();
-    if (!audio || audio.state !== 'running') return;
+    if (!audio) return;
 
     const now = audio.currentTime;
     const boomDuration = 0.85;
@@ -763,55 +755,60 @@ function playBombExplosion() {
     debrisSource.stop(now + debrisDuration + 0.03);
 }
 
+/* ===== DISTINCT LIFE LOST SOUND (Glass Shatter + Descending Tone) ===== */
 function playLifeLostSound() {
     if (!soundEnabled) return;
     const audio = initAudio();
-    if (!audio || audio.state !== 'running') return;
+    if (!audio) return;
 
     const nowMs = performance.now();
     if (nowMs - lastLifeLostAt < LIFE_LOST_COOLDOWN) return;
     lastLifeLostAt = nowMs;
 
     const now = audio.currentTime;
-    const duration = 0.26;
 
-    const tone = audio.createOscillator();
-    const toneGain = audio.createGain();
-    const filter = audio.createBiquadFilter();
+    // 1. High frequency glass shatter
+    const bufferSize = audio.sampleRate * 0.2;
+    const buffer = audio.createBuffer(1, bufferSize, audio.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+    }
+    
+    const noiseSrc = audio.createBufferSource();
+    noiseSrc.buffer = buffer;
+    const noiseFilter = audio.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = 1500;
+    const noiseGain = audio.createGain();
+    noiseGain.gain.setValueAtTime(0.3, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    
+    noiseSrc.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(audioDestination(audio));
+    noiseSrc.start(now);
+    noiseSrc.stop(now + 0.2);
 
-    tone.type = 'sawtooth';
-    tone.frequency.setValueAtTime(420, now);
-    tone.frequency.exponentialRampToValueAtTime(170, now + duration);
-    filter.type = 'lowpass';
-    filter.frequency.value = 1500;
-    toneGain.gain.setValueAtTime(0.0001, now);
-    toneGain.gain.exponentialRampToValueAtTime(0.10, now + 0.012);
-    toneGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    tone.connect(filter);
-    filter.connect(toneGain);
-    toneGain.connect(audioDestination(audio));
-    tone.start(now);
-    tone.stop(now + duration + 0.02);
-
-    const lowTone = audio.createOscillator();
-    const lowGain = audio.createGain();
-    lowTone.type = 'triangle';
-    lowTone.frequency.setValueAtTime(165, now + 0.08);
-    lowTone.frequency.exponentialRampToValueAtTime(90, now + 0.23);
-    lowGain.gain.setValueAtTime(0.0001, now + 0.08);
-    lowGain.gain.exponentialRampToValueAtTime(0.08, now + 0.095);
-    lowGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-    lowTone.connect(lowGain);
-    lowGain.connect(audioDestination(audio));
-    lowTone.start(now + 0.08);
-    lowTone.stop(now + 0.28);
+    // 2. Descending sad tone
+    const osc = audio.createOscillator();
+    const oscGain = audio.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+    oscGain.gain.setValueAtTime(0.2, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    
+    osc.connect(oscGain);
+    oscGain.connect(audioDestination(audio));
+    osc.start(now);
+    osc.stop(now + 0.3);
 }
 
 function playGameOverSound() {
     if (!soundEnabled) return;
     const audio = initAudio();
-    if (!audio || audio.state !== 'running') return;
+    if (!audio) return;
 
     const now = audio.currentTime;
     const duration = 1.05;
@@ -855,7 +852,7 @@ function playGameOverSound() {
     thud.stop(now + duration + 0.03);
 }
 
-/* ===== DROP SOUND (sliced fruit half or an uncut bomb falling off-screen) ===== */
+/* ===== DROP SOUND ===== */
 const dropSoundSrc = new Audio('assets/Dropping_-_universfield-impact-thud-291047.mp3');
 dropSoundSrc.preload = 'auto';
 
@@ -877,11 +874,9 @@ function playClip(src, volume = 0.6, rate = 1) {
     const clip = src.cloneNode();
     clip.playbackRate = rate;
 
-    /* <audio>.volume tops out at 1.0 — anything above that is routed through
-       a Web Audio gain node so it can actually play louder than "100%". */
     if (volume > 1) {
         const audio = initAudio();
-        if (audio && audio.state === 'running') {
+        if (audio) {
             try {
                 const source = audio.createMediaElementSource(clip);
                 const gain = audio.createGain();
@@ -908,7 +903,6 @@ async function preloadButtonSoundWebAudio() {
     try {
         const response = await fetch('assets/Button-dragon-studio-button-press-2-386176.mp3');
         const arrayBuffer = await response.arrayBuffer();
-        // Use a temporary AudioContext just for decoding so it works before user interaction
         const tempAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
         buttonSoundBuffer = await tempAudioCtx.decodeAudioData(arrayBuffer);
         tempAudioCtx.close();
@@ -921,21 +915,17 @@ preloadButtonSoundWebAudio();
 function playButtonSound() {
     if (!soundEnabled) return;
     const audio = initAudio();
-    if (!audio || audio.state !== 'running') return;
+    if (!audio) return; // Don't return based on suspended state, schedule anyway!
 
     if (buttonSoundBuffer) {
-        // Play the actual sound file with zero latency
         const source = audio.createBufferSource();
         source.buffer = buttonSoundBuffer;
-        
         const gain = audio.createGain();
-        gain.gain.value = 0.5; // 50% volume
-        
+        gain.gain.value = 0.5; 
         source.connect(gain);
         gain.connect(audioDestination(audio));
         source.start(0); 
     } else {
-        // Fallback: Synthesized instant click if the file hasn't finished loading yet
         const now = audio.currentTime;
         const osc = audio.createOscillator();
         const gain = audio.createGain();
@@ -951,7 +941,7 @@ function playButtonSound() {
     }
 }
 
-function playFruitSlicedSound() { playClip(fruitSlicedSrc, 0.75); }
+function playFruitSlicedSound() { playClip(fruitSlicedSrc, 0.45); } // Brought down to 45%
 function playKaboomSound() { playClip(kaboomAudioSrc, 1.10); }
 
 function playBladeMoveSound(speed = 1) {
@@ -959,12 +949,9 @@ function playBladeMoveSound(speed = 1) {
     if (nowMs - lastSwishAt < SWISH_COOLDOWN) return;
     lastSwishAt = nowMs;
     const rate = Math.max(0.85, Math.min(1.3, 0.9 + speed * 0.15));
-    playClip(bladeMoveSrc, 0.45, rate);
+    playClip(bladeMoveSrc, 0.35, rate); // Brought down to 35%
 }
 
-/* Button-press sound fires on pointerdown (the instant it's pressed), not on
-   'click' — click only fires after pointerup, by which point the button's own
-   onclick has often already switched screens, so the sound played too late. */
 document.addEventListener('pointerdown', e => {
     if (e.target.closest('button, .ring-btn, .s2-back')) playButtonSound();
 });
@@ -972,7 +959,7 @@ document.addEventListener('pointerdown', e => {
 function playCriticalSound() {
     if (!soundEnabled) return;
     const audio = initAudio();
-    if (!audio || audio.state !== 'running') return;
+    if (!audio) return;
 
     const now = audio.currentTime;
     const osc = audio.createOscillator();
@@ -991,9 +978,7 @@ function playCriticalSound() {
     osc.stop(now + 0.24);
 }
 
-/* ===== BACKGROUND MUSIC =====
-   Menu track: screens 1, 2, 4, 5, 8, and also 6/7 (game over + score).
-   Gameplay track: screen 3 only, while actually playing. Both gated by musicEnabled. */
+/* ===== BACKGROUND MUSIC ===== */
 const menuMusic = new Audio('assets/Game_music_-_echoes_of_lumen-zen-music-595725.mp3');
 menuMusic.loop = true;
 menuMusic.volume = 0.35;
@@ -1016,8 +1001,6 @@ function stopAllMusic() {
     menuMusic.pause();
     gameplayMusic.pause();
 }
-/* Called on every screen change (and on the first user gesture, since browsers
-   block autoplay until then) so the right track is always the one playing. */
 function resumeMusicForScreen(n) {
     if (!musicEnabled) return;
     if (n === 3) {
@@ -1040,9 +1023,7 @@ resizeCanvas();
 const gameWidth = () => window.innerWidth;
 const gameHeight = () => window.innerHeight;
 
-/* ===== SCREEN MANAGEMENT =====
-   1 start, 2 difficulty, 3 gameplay (canvas only, no div), 4 ready, 5 go,
-   6 game over, 7 score, 8 audio/settings */
+/* ===== SCREEN MANAGEMENT ===== */
 function goToScreen(n) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const next = document.getElementById(`screen${n}`);
@@ -1093,7 +1074,10 @@ function startGame() {
     lastLifeLostAt = 0;
     document.getElementById('scoreValue').textContent = score;
     document.getElementById('pauseIcon').src = 'assets/Pause.png';
+    
+    // Reset hearts visually
     updateLives();
+    
     gameRunning = true;
     goToScreen(3);
     scheduleNextFruit();
@@ -1244,12 +1228,10 @@ function sliceFruit(fruit) {
 
     if (fruit.isBomb) {
         playKaboomSound();
-
         if (selectedDifficulty === 'easy') {
             lives--;
-            updateLives();
+            updateLives(); // This now triggers the red heart + distinct sound
         }
-
         const ends = selectedDifficulty !== 'easy' || lives <= 0;
         showKaboom(ends);
         if (ends) setTimeout(gameOver, 900);
@@ -1406,14 +1388,32 @@ function onHandsResults(results) {
 
 setupMediaPipe();
 
-function updateLives(count = lives) {
+/* ===== UPDATE LIVES (Now preserves 3 hearts and changes colors) ===== */
+function updateLives() {
     const container = document.getElementById('livesContainer');
-    container.innerHTML = '';
-    for (let i = 0; i < count; i++) {
+    
+    // Ensure exactly 3 hearts exist
+    while (container.children.length < 3) {
         const img = document.createElement('img');
         img.src = 'assets/Life.png';
         img.className = 'life-icon';
         container.appendChild(img);
+    }
+    while (container.children.length > 3) {
+        container.removeChild(container.lastChild);
+    }
+    
+    const hearts = container.children;
+    for (let i = 0; i < hearts.length; i++) {
+        if (i < lives) {
+            hearts[i].classList.remove('lost-life');
+            void hearts[i].offsetWidth; // Force reflow to restart transition if needed
+        } else {
+            if (!hearts[i].classList.contains('lost-life')) {
+                hearts[i].classList.add('lost-life');
+                playLifeLostSound(); // Play the distinct lost life sound exactly when heart turns red
+            }
+        }
     }
 }
 
@@ -1447,8 +1447,7 @@ function updateWholeFruits() {
                 playDropSound();
             } else if (selectedDifficulty !== 'easy') {
                 lives--;
-                playLifeLostSound();
-                updateLives();
+                updateLives(); // Triggers sound and red heart
                 if (lives <= 0) gameOver();
             }
             return false;
@@ -1474,7 +1473,7 @@ function updateHalves() {
     });
 }
 
-/* ===== POPUPS (CRITICAL near-miss, X FRUIT COMBO) ===== */
+/* ===== POPUPS ===== */
 function drawPopups() {
     popups = popups.filter(p => {
         const progress = 1 - p.life / p.maxLife;
