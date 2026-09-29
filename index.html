@@ -866,12 +866,11 @@ function playDropSound() {
     s.play().catch(() => {});
 }
 
-/* ===== REAL AUDIO CLIPS: button press, fruit slice, kaboom, blade swish ===== */
-const buttonPressSrc = new Audio('assets/Button-dragon-studio-button-press-2-386176.mp3');
+/* ===== REAL AUDIO CLIPS: fruit slice, kaboom, blade swish ===== */
 const fruitSlicedSrc = new Audio('assets/Fruit_sliced-mixkit-swift-sword-strike-2166.wav');
 const kaboomAudioSrc = new Audio('assets/Kaboom-mixkit-fuel-explosion-1705.wav');
 const bladeMoveSrc = new Audio('assets/balde_moving_-mixkit-sword-blade-swish-1506.wav');
-[buttonPressSrc, fruitSlicedSrc, kaboomAudioSrc, bladeMoveSrc].forEach(a => { a.preload = 'auto'; });
+[fruitSlicedSrc, kaboomAudioSrc, bladeMoveSrc].forEach(a => { a.preload = 'auto'; });
 
 function playClip(src, volume = 0.6, rate = 1) {
     if (!soundEnabled) return;
@@ -902,7 +901,56 @@ function playClip(src, volume = 0.6, rate = 1) {
     clip.play().catch(() => {});
 }
 
-function playButtonSound() { playClip(buttonPressSrc, 0.5); }
+/* ===== ZERO-LATENCY BUTTON SOUND (Web Audio API) ===== */
+let buttonSoundBuffer = null;
+
+async function preloadButtonSoundWebAudio() {
+    try {
+        const response = await fetch('assets/Button-dragon-studio-button-press-2-386176.mp3');
+        const arrayBuffer = await response.arrayBuffer();
+        // Use a temporary AudioContext just for decoding so it works before user interaction
+        const tempAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        buttonSoundBuffer = await tempAudioCtx.decodeAudioData(arrayBuffer);
+        tempAudioCtx.close();
+    } catch (e) {
+        console.warn('Failed to preload button sound for Web Audio API', e);
+    }
+}
+preloadButtonSoundWebAudio();
+
+function playButtonSound() {
+    if (!soundEnabled) return;
+    const audio = initAudio();
+    if (!audio || audio.state !== 'running') return;
+
+    if (buttonSoundBuffer) {
+        // Play the actual sound file with zero latency
+        const source = audio.createBufferSource();
+        source.buffer = buttonSoundBuffer;
+        
+        const gain = audio.createGain();
+        gain.gain.value = 0.5; // 50% volume
+        
+        source.connect(gain);
+        gain.connect(audioDestination(audio));
+        source.start(0); 
+    } else {
+        // Fallback: Synthesized instant click if the file hasn't finished loading yet
+        const now = audio.currentTime;
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+        osc.connect(gain);
+        gain.connect(audioDestination(audio));
+        osc.start(now);
+        osc.stop(now + 0.06);
+    }
+}
+
 function playFruitSlicedSound() { playClip(fruitSlicedSrc, 0.75); }
 function playKaboomSound() { playClip(kaboomAudioSrc, 1.10); }
 
