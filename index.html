@@ -876,25 +876,48 @@ const bladeMoveSrc = new Audio('assets/balde_moving_-mixkit-sword-blade-swish-15
 function playClip(src, volume = 0.6, rate = 1) {
     if (!soundEnabled) return;
     const clip = src.cloneNode();
-    clip.volume = volume;
     clip.playbackRate = rate;
+
+    /* <audio>.volume tops out at 1.0 — anything above that is routed through
+       a Web Audio gain node so it can actually play louder than "100%". */
+    if (volume > 1) {
+        const audio = initAudio();
+        if (audio && audio.state === 'running') {
+            try {
+                const source = audio.createMediaElementSource(clip);
+                const gain = audio.createGain();
+                gain.gain.value = volume;
+                source.connect(gain);
+                gain.connect(audioDestination(audio));
+                clip.play().catch(() => {});
+                return;
+            } catch (err) {
+                console.warn('Gain boost unavailable, playing at 100% instead:', err);
+            }
+        }
+        clip.volume = 1;
+    } else {
+        clip.volume = volume;
+    }
     clip.play().catch(() => {});
 }
 
 function playButtonSound() { playClip(buttonPressSrc, 0.5); }
-function playFruitSlicedSound() { playClip(fruitSlicedSrc, 0.55); }
-function playKaboomSound() { playClip(kaboomAudioSrc, 0.6); }
+function playFruitSlicedSound() { playClip(fruitSlicedSrc, 0.75); }
+function playKaboomSound() { playClip(kaboomAudioSrc, 1.10); }
 
 function playBladeMoveSound(speed = 1) {
     const nowMs = performance.now();
     if (nowMs - lastSwishAt < SWISH_COOLDOWN) return;
     lastSwishAt = nowMs;
     const rate = Math.max(0.85, Math.min(1.3, 0.9 + speed * 0.15));
-    playClip(bladeMoveSrc, 0.35, rate);
+    playClip(bladeMoveSrc, 0.45, rate);
 }
 
-/* Button-press sound on every button / ring-button click in the UI. */
-document.addEventListener('click', e => {
+/* Button-press sound fires on pointerdown (the instant it's pressed), not on
+   'click' — click only fires after pointerup, by which point the button's own
+   onclick has often already switched screens, so the sound played too late. */
+document.addEventListener('pointerdown', e => {
     if (e.target.closest('button, .ring-btn, .s2-back')) playButtonSound();
 });
 
