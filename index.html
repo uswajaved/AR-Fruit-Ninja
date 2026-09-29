@@ -384,6 +384,16 @@ const plusIcon = getImage('assets/Plus.png');
 let fruits = [], halves = [], splashes = [], sliceTrail = [], popups = [];
 let comboCount = 0, comboTimer = null, comboX = 0, comboY = 0;
 
+// Balanced fruit visual sizes (keeps natural aspect ratio)
+const fruitSizeConfig = {
+    Apple:  { height:120, collision:65 },
+    Pear:   { height:115, collision:60 },
+    Banana: { height:115, collision:62 },
+    Orange: { height:95,  collision:50 },
+    Lemon:  { height:80,  collision:42 }
+};
+const bombSizeConfig = { height:70, collision:35 };
+
 function spawnPopup(text, x, y, bonus = 0) { popups.push({ text, bonus, x, y, life: 70, maxLife: 70 }); }
 function finalizeCombo() { if (comboCount >= 3) spawnPopup(`${comboCount} FRUIT COMBO`, comboX, comboY); comboCount = 0; }
 
@@ -631,7 +641,10 @@ function togglePause() {
 }
 
 function speedFactor() { if (selectedDifficulty === 'easy') return 1; return Math.min(1.6, 1 + Math.floor(score / 10) * 0.03); }
-function spawnWave() { let count = 1; if (selectedDifficulty === 'hard') count = 3 + Math.floor(Math.random() * 2); for (let i = 0; i < count; i++) setTimeout(spawnFruit, i * 120); }
+function spawnWave() {
+    let count = Math.floor(Math.random() * 3) + 3; // 3-5 fruits together
+    for (let i = 0; i < count; i++) setTimeout(spawnFruit, i * 120);
+}
 function scheduleNextFruit() {
     if (!gameRunning || paused) return;
     let delay = 1800; if (selectedDifficulty === 'medium') delay = 1200; if (selectedDifficulty === 'hard') delay = 1600;
@@ -650,7 +663,9 @@ function spawnFruit() {
         x: 120 + Math.random() * Math.max(1, gameWidth() - 240), y: gameHeight() + 80,
         vx: (Math.random() - .5) * 5, vy: -(upwardSpeed + Math.random() * 4) * speedFactor(),
         rotation: Math.random() * Math.PI * 2, rotationSpeed: (Math.random() - .5) * .08,
-        radius: isBomb ? 63 : 90, sliced: false, criticalDone: false
+        displayHeight: isBomb ? bombSizeConfig.height : fruitSizeConfig[fruitName].height,
+        radius: isBomb ? bombSizeConfig.collision : fruitSizeConfig[fruitName].collision,
+        sliced: false, criticalDone: false
     });
 }
 
@@ -695,7 +710,7 @@ function checkSlice(x, y) {
         if (lineIntersectsCircle(prevPoint.x, prevPoint.y, x, y, fruit.x, fruit.y, fruit.radius + 25)) {
             sliceFruit(fruit, prevPoint.x, prevPoint.y, x, y); // Pass slice coordinates
         } else if (fruit.isBomb && !fruit.criticalDone) {
-            if (lineIntersectsCircle(prevPoint.x, prevPoint.y, x, y, fruit.x, fruit.y, fruit.radius + 70)) {
+            if (lineIntersectsCircle(prevPoint.x, prevPoint.y, x, y, fruit.x, fruit.y, fruit.radius + 15)) {
                 fruit.criticalDone = true; score += 30; document.getElementById('scoreValue').textContent = score;
                 spawnPopup('CRITICAL', x, y - 10, 30); playCriticalSound();
             }
@@ -719,12 +734,19 @@ function sliceFruit(fruit, sliceX1, sliceY1, sliceX2, sliceY2) {
     }
 
     playFruitSlicedSound();
-    score += 10; document.getElementById('scoreValue').textContent = score;
+    comboCount++;
+    let sliceBonus = 10;
+    if (comboCount >= 2) {
+        const bonuses = {2:25,3:40,4:60,5:100};
+        sliceBonus = bonuses[Math.min(comboCount,5)] || 10;
+        spawnPopup(`${comboCount} FRUIT BONUS`, fruit.x, fruit.y - 70, sliceBonus);
+    }
+    score += sliceBonus; document.getElementById('scoreValue').textContent = score;
 
     // Calculate the exact angle the player swiped
     const sliceAngle = Math.atan2(sliceY2 - sliceY1, sliceX2 - sliceX1);
 
-    comboCount++; comboX = fruit.x; comboY = fruit.y - 50; clearTimeout(comboTimer); comboTimer = setTimeout(finalizeCombo, 450);
+    comboX = fruit.x; comboY = fruit.y - 50; clearTimeout(comboTimer); comboTimer = setTimeout(finalizeCombo, 450);
 
     const a = assets[fruit.name];
     // Rotate splash to match slice angle
@@ -737,12 +759,12 @@ function sliceFruit(fruit, sliceX1, sliceY1, sliceX2, sliceY2) {
     halves.push({
         img: getImage(a.slice1), x: fruit.x, y: fruit.y,
         vx: fruit.vx + Math.cos(pushAngle1) * 4, vy: fruit.vy + Math.sin(pushAngle1) * 4 - 1,
-        rotation: sliceAngle, rotationSpeed: -.12
+        rotation: sliceAngle, rotationSpeed: -.12, displayHeight: fruit.displayHeight * 0.55
     });
     halves.push({
         img: getImage(a.slice2), x: fruit.x, y: fruit.y,
         vx: fruit.vx + Math.cos(pushAngle2) * 4, vy: fruit.vy + Math.sin(pushAngle2) * 4 - 1,
-        rotation: sliceAngle, rotationSpeed: .12
+        rotation: sliceAngle, rotationSpeed: .12, displayHeight: fruit.displayHeight * 0.55
     });
 }
 
@@ -817,7 +839,7 @@ function updateWholeFruits() {
     fruits = fruits.filter(fruit => {
         if (fruit.sliced) return false;
         fruit.x += fruit.vx; fruit.y += fruit.vy; fruit.vy += gravity; fruit.rotation += fruit.rotationSpeed;
-        drawImageFixedHeight(fruit.img, fruit.x, fruit.y, fruit.isBomb ? fruitHeight * 0.7 : fruitHeight, fruit.rotation);
+        drawImageFixedHeight(fruit.img, fruit.x, fruit.y, fruit.displayHeight, fruit.rotation);
         if (fruit.y > gameHeight() + 120) {
             if (fruit.isBomb) playDropSound();
             else if (selectedDifficulty !== 'easy') { lives--; updateLives(); if (lives <= 0) gameOver(); }
@@ -830,7 +852,7 @@ function updateHalves() {
     const gravity = .32, halfHeight = 85;
     halves = halves.filter(half => {
         half.x += half.vx; half.y += half.vy; half.vy += gravity; half.rotation += half.rotationSpeed;
-        drawImageFixedHeight(half.img, half.x, half.y, halfHeight, half.rotation);
+        drawImageFixedHeight(half.img, half.x, half.y, half.displayHeight || halfHeight, half.rotation);
         if (half.y >= gameHeight() + 150) { playDropSound(); return false; }
         return true;
     });
