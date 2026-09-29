@@ -118,6 +118,14 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .diff-btn:hover .t-select, .diff-btn:focus-visible .t-select { display:none; }
 .diff-btn:hover .t-play, .diff-btn:focus-visible .t-play { display:inline; }
 
+.s2-back {
+    position:fixed; top:26px; left:26px; z-index:35;
+    display:flex; align-items:center; gap:10px; cursor:pointer;
+    color:#fff; font-family:'Gang of Three', cursive; font-size:1.4rem; letter-spacing:1px;
+}
+.s2-back img { height:22px; width:auto; object-fit:contain; }
+.s2-back:hover { opacity:.85; }
+
 /* Responsive / scrollable difficulty screen */
 #screen2 .s2-logo, #screen2 .s2-subtitle { flex-shrink:0; }
 
@@ -190,7 +198,10 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     position:absolute; inset:0; display:flex; flex-direction:column;
     align-items:center; justify-content:center; padding:6% 10% 8%;
 }
+.score-title-img, .audio-title-img { display:block; max-width:60%; height:auto; margin:0 auto; }
+/* Shown only if SCORE_Text.png / AUDIO_Text.png fail to load */
 .score-title, .audio-title {
+    display:none;
     font-size:clamp(2.2rem,6vw,3.2rem); line-height:1;
     background:linear-gradient(to bottom,#FFD478,#F0B429);
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
@@ -208,14 +219,11 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 .audio-toggles { display:flex; gap:30px; margin-top:8%; }
 .toggle-square {
     width:92px; height:92px; border:none; border-radius:20px; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 4px 0 rgba(0,0,0,.25); transition:transform .15s ease;
+    background:none; padding:0; transition:transform .15s ease;
 }
 .toggle-square:hover { transform:scale(1.06); }
-.toggle-square img { width:62%; height:62%; object-fit:contain; }
+.toggle-square img { width:100%; height:100%; object-fit:contain; display:block; }
 .icon-fallback { font-size:1.7rem; line-height:1; }
-.toggle-sound { background:linear-gradient(160deg,#b98cf0,#7c3aed); }
-.toggle-music { background:linear-gradient(160deg,#ffcf6e,#f08a1c); }
 
 /* KABOOM: 10% larger than viewport */
 #kaboomEffect { position:absolute; inset:0; z-index:15; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.4); pointer-events:none; overflow:hidden; }
@@ -291,6 +299,10 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
 
 <!-- ================= DIFFICULTY ================= -->
 <div id="screen2" class="screen">
+    <div class="s2-back" onclick="goToScreen(1)">
+        <img src="assets/BACK_Arrow.png" alt="" onerror="this.style.display='none'">
+        <span>BACK</span>
+    </div>
     <img class="s2-logo" src="assets/Logo.png" alt="Fruit Ninja">
     <p class="s2-subtitle">CHOOSE YOUR DIFFICULTY</p>
 
@@ -358,6 +370,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     <div class="score-panel">
         <img class="score-panel-bg" src="assets/Background__2_.png" alt="" onerror="this.style.display='none'; console.warn('Missing asset:', this.src);">
         <div class="score-panel-content">
+            <img class="score-title-img" src="assets/SCORE_Text.png" alt="Score" onerror="handleTitleImgError(this)">
             <h2 class="score-title">SCORE</h2>
             <div class="score-display" id="finalScore">0</div>
         </div>
@@ -379,6 +392,7 @@ h1, h2, h3 { font-family:'Gang of Three', cursive; }
     <div class="audio-panel">
         <img class="audio-panel-bg" src="assets/Background__2_.png" alt="" onerror="this.style.display='none'; console.warn('Missing asset:', this.src);">
         <div class="audio-panel-content">
+            <img class="audio-title-img" src="assets/AUDIO_Text.png" alt="Audio" onerror="handleTitleImgError(this)">
             <h2 class="audio-title">AUDIO</h2>
             <div class="audio-toggles">
                 <button class="toggle-square toggle-sound" onclick="toggleSound()">
@@ -413,6 +427,14 @@ const kaboomEffect = document.getElementById('kaboomEffect');
 /* Runs when any game-asset <img> 404s: logs the exact missing path so it's
    easy to match against the assets/ folder, and swaps in a usable fallback
    instead of leaving a broken-image glyph on screen. */
+/* Runs if SCORE_Text.png / AUDIO_Text.png 404 — reveals the plain-text title instead. */
+function handleTitleImgError(img) {
+    console.warn('Missing asset file — check assets/ for:', img.getAttribute('src'));
+    img.style.display = 'none';
+    const fallback = img.nextElementSibling;
+    if (fallback) fallback.style.display = 'block';
+}
+
 function handleImgError(img) {
     console.warn('Missing asset file — check assets/ for:', img.getAttribute('src'));
     const ring = img.closest('.ring-btn');
@@ -627,7 +649,7 @@ function handleSwordMovement(x, y) {
 
     if (distance >= 12) {
         const speed = (distance / elapsed) * 16.67;
-        playSwordSwish(speed);
+        playBladeMoveSound(speed);
     }
 
     lastAudioSlicePoint = { x, y, time: now };
@@ -843,6 +865,38 @@ function playDropSound() {
     s.volume = 0.22;
     s.play().catch(() => {});
 }
+
+/* ===== REAL AUDIO CLIPS: button press, fruit slice, kaboom, blade swish ===== */
+const buttonPressSrc = new Audio('assets/Button-dragon-studio-button-press-2-386176.mp3');
+const fruitSlicedSrc = new Audio('assets/Fruit_sliced-mixkit-swift-sword-strike-2166.wav');
+const kaboomAudioSrc = new Audio('assets/Kaboom-mixkit-fuel-explosion-1705.wav');
+const bladeMoveSrc = new Audio('assets/balde_moving_-mixkit-sword-blade-swish-1506.wav');
+[buttonPressSrc, fruitSlicedSrc, kaboomAudioSrc, bladeMoveSrc].forEach(a => { a.preload = 'auto'; });
+
+function playClip(src, volume = 0.6, rate = 1) {
+    if (!soundEnabled) return;
+    const clip = src.cloneNode();
+    clip.volume = volume;
+    clip.playbackRate = rate;
+    clip.play().catch(() => {});
+}
+
+function playButtonSound() { playClip(buttonPressSrc, 0.5); }
+function playFruitSlicedSound() { playClip(fruitSlicedSrc, 0.55); }
+function playKaboomSound() { playClip(kaboomAudioSrc, 0.6); }
+
+function playBladeMoveSound(speed = 1) {
+    const nowMs = performance.now();
+    if (nowMs - lastSwishAt < SWISH_COOLDOWN) return;
+    lastSwishAt = nowMs;
+    const rate = Math.max(0.85, Math.min(1.3, 0.9 + speed * 0.15));
+    playClip(bladeMoveSrc, 0.35, rate);
+}
+
+/* Button-press sound on every button / ring-button click in the UI. */
+document.addEventListener('click', e => {
+    if (e.target.closest('button, .ring-btn, .s2-back')) playButtonSound();
+});
 
 function playCriticalSound() {
     if (!soundEnabled) return;
@@ -1118,7 +1172,7 @@ function sliceFruit(fruit) {
     fruit.sliced = true;
 
     if (fruit.isBomb) {
-        playBombExplosion();
+        playKaboomSound();
 
         if (selectedDifficulty === 'easy') {
             lives--;
@@ -1131,7 +1185,7 @@ function sliceFruit(fruit) {
         return;
     }
 
-    playSwordStrike();
+    playFruitSlicedSound();
     score += 10;
     document.getElementById('scoreValue').textContent = score;
 
