@@ -464,7 +464,11 @@ function toggleMusic() {
     musicEnabled = !musicEnabled;
     localStorage.setItem('fn_music', musicEnabled ? 'on' : 'off');
     updateAudioIcons();
-    /* Background music hookup goes here once the track is added. */
+    if (musicEnabled) {
+        resumeMusicForScreen(currentScreen);
+    } else {
+        stopAllMusic();
+    }
 }
 updateAudioIcons();
 
@@ -491,7 +495,18 @@ function getImage(src) {
 Object.values(assets).forEach(a => Object.values(a).forEach(getImage));
 const cutImg = getImage('assets/Cut with hand.png');
 
-let fruits = [], halves = [], splashes = [], sliceTrail = [];
+let fruits = [], halves = [], splashes = [], sliceTrail = [], popups = [];
+let comboCount = 0, comboTimer = null, comboX = 0, comboY = 0;
+const plusIcon = getImage('assets/Plus.png');
+
+function spawnPopup(text, x, y, bonus = 0) {
+    popups.push({ text, bonus, x, y, life: 70, maxLife: 70 });
+}
+
+function finalizeCombo() {
+    if (comboCount >= 3) spawnPopup(`${comboCount} FRUIT COMBO`, comboX, comboY);
+    comboCount = 0;
+}
 
 /* =========================================================
    WEB AUDIO API SOUND ENGINE
@@ -818,6 +833,75 @@ function playGameOverSound() {
     thud.stop(now + duration + 0.03);
 }
 
+/* ===== DROP SOUND (sliced fruit half or an uncut bomb falling off-screen) ===== */
+const dropSoundSrc = new Audio('assets/Dropping_-_universfield-impact-thud-291047.mp3');
+dropSoundSrc.preload = 'auto';
+
+function playDropSound() {
+    if (!soundEnabled) return;
+    const s = dropSoundSrc.cloneNode();
+    s.volume = 0.5;
+    s.play().catch(() => {});
+}
+
+function playCriticalSound() {
+    if (!soundEnabled) return;
+    const audio = initAudio();
+    if (!audio || audio.state !== 'running') return;
+
+    const now = audio.currentTime;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(500, now);
+    osc.frequency.exponentialRampToValueAtTime(1150, now + 0.12);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+    osc.connect(gain);
+    gain.connect(audioDestination(audio));
+    osc.start(now);
+    osc.stop(now + 0.24);
+}
+
+/* ===== BACKGROUND MUSIC =====
+   Menu track: screens 1, 2, 4, 5, 8, and also 6/7 (game over + score).
+   Gameplay track: screen 3 only, while actually playing. Both gated by musicEnabled. */
+const menuMusic = new Audio('assets/Game_music_-_echoes_of_lumen-zen-music-595725.mp3');
+menuMusic.loop = true;
+menuMusic.volume = 0.35;
+
+const gameplayMusic = new Audio('assets/Background_music_-_loswin23-forest-birds-and-river-585677.mp3');
+gameplayMusic.loop = true;
+gameplayMusic.volume = 0.3;
+
+function playMenuMusic() {
+    gameplayMusic.pause();
+    if (!musicEnabled) return;
+    menuMusic.play().catch(() => {});
+}
+function playGameplayMusic() {
+    menuMusic.pause();
+    if (!musicEnabled) return;
+    gameplayMusic.play().catch(() => {});
+}
+function stopAllMusic() {
+    menuMusic.pause();
+    gameplayMusic.pause();
+}
+/* Called on every screen change (and on the first user gesture, since browsers
+   block autoplay until then) so the right track is always the one playing. */
+function resumeMusicForScreen(n) {
+    if (!musicEnabled) return;
+    if (n === 3) {
+        if (!paused) playGameplayMusic();
+    } else {
+        playMenuMusic();
+    }
+}
+
 function resizeCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = window.innerWidth * dpr;
@@ -846,6 +930,7 @@ function goToScreen(n) {
     handStatus.classList.toggle('show', ![2, 7, 8].includes(n));
     if (n === 8) updateAudioIcons();
     if (n !== 3) ctx.clearRect(0, 0, gameWidth(), gameHeight());
+    resumeMusicForScreen(n);
 }
 goToScreen(1);
 
@@ -875,6 +960,9 @@ function startGame() {
     halves = [];
     splashes = [];
     sliceTrail = [];
+    popups = [];
+    comboCount = 0;
+    clearTimeout(comboTimer);
     lastAudioSlicePoint = null;
     lastSwishAt = 0;
     lastLifeLostAt = 0;
@@ -897,7 +985,9 @@ function togglePause() {
         if (gameAnimationId) { cancelAnimationFrame(gameAnimationId); gameAnimationId = null; }
         if (spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; }
         lastAudioSlicePoint = null;
+        gameplayMusic.pause();
     } else {
+        resumeMusicForScreen(3);
         gameLoop();
         scheduleNextFruit();
     }
@@ -954,7 +1044,8 @@ function spawnFruit() {
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - .5) * .08,
         radius: isBomb ? 63 : 90,
-        sliced: false
+        sliced: false,
+        criticalDone: false
     });
 }
 
@@ -963,6 +1054,7 @@ let lastPointerPoint = null;
 
 window.addEventListener('pointerdown', e => {
     initAudio();
+    resumeMusicForScreen(currentScreen);
     if (!gameRunning || paused) return;
     if (e.target.closest('button, .ring-btn')) return;
     pointerIsDown = true;
@@ -1008,7 +1100,16 @@ function checkSlice(x, y) {
     if (!gameRunning || paused) return;
     for (const fruit of fruits) {
         if (fruit.sliced) continue;
-        if (Math.hypot(fruit.x - x, fruit.y - y) <= fruit.radius + 25) sliceFruit(fruit);
+        const dist = Math.hypot(fruit.x - x, fruit.y - y);
+        if (dist <= fruit.radius + 25) {
+            sliceFruit(fruit);
+        } else if (fruit.isBomb && !fruit.criticalDone && dist <= fruit.radius + 70) {
+            fruit.criticalDone = true;
+            score += 30;
+            document.getElementById('scoreValue').textContent = score;
+            spawnPopup('CRITICAL', x, y - 10, 30);
+            playCriticalSound();
+        }
     }
 }
 
@@ -1033,6 +1134,12 @@ function sliceFruit(fruit) {
     playSwordStrike();
     score += 10;
     document.getElementById('scoreValue').textContent = score;
+
+    comboCount++;
+    comboX = fruit.x;
+    comboY = fruit.y - 50;
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(finalizeCombo, 450);
 
     const a = assets[fruit.name];
     splashes.push({ img: getImage(a.splash), x: fruit.x, y: fruit.y, life: 90, maxLife: 90 });
@@ -1191,6 +1298,7 @@ function gameLoop() {
     updateWholeFruits();
     updateHalves();
     drawSplashes();
+    drawPopups();
     drawSliceTrail();
     if (gameRunning && !paused) gameAnimationId = requestAnimationFrame(gameLoop);
 }
@@ -1210,7 +1318,9 @@ function updateWholeFruits() {
         drawImageFixedHeight(fruit.img, fruit.x, fruit.y, displayHeight, fruit.rotation);
 
         if (fruit.y > gameHeight() + 120) {
-            if (!fruit.isBomb && selectedDifficulty !== 'easy') {
+            if (fruit.isBomb) {
+                playDropSound();
+            } else if (selectedDifficulty !== 'easy') {
                 lives--;
                 playLifeLostSound();
                 updateLives();
@@ -1231,7 +1341,52 @@ function updateHalves() {
         half.vy += gravity;
         half.rotation += half.rotationSpeed;
         drawImageFixedHeight(half.img, half.x, half.y, halfHeight, half.rotation);
-        return half.y < gameHeight() + 150;
+        if (half.y >= gameHeight() + 150) {
+            playDropSound();
+            return false;
+        }
+        return true;
+    });
+}
+
+/* ===== POPUPS (CRITICAL near-miss, X FRUIT COMBO) ===== */
+function drawPopups() {
+    popups = popups.filter(p => {
+        const progress = 1 - p.life / p.maxLife;
+        const alpha = p.life > 14 ? 1 : p.life / 14;
+        const riseY = p.y - progress * 46;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(p.x, riseY);
+        ctx.rotate(-0.05);
+
+        if (plusIcon.complete && plusIcon.naturalWidth > 0) {
+            const h = 26;
+            const w = h * (plusIcon.naturalWidth / plusIcon.naturalHeight);
+            ctx.drawImage(plusIcon, -w - 4, -34, w, h);
+        }
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+        ctx.font = "bold 28px 'Gang of Three', sans-serif";
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#16234a';
+        ctx.fillStyle = '#5B9CEF';
+        ctx.strokeText(p.text, 0, 0);
+        ctx.fillText(p.text, 0, 0);
+
+        if (p.bonus) {
+            ctx.font = "bold 22px 'Gang of Three', sans-serif";
+            ctx.strokeText('+' + p.bonus, 8, 27);
+            ctx.fillStyle = '#8fc1ff';
+            ctx.fillText('+' + p.bonus, 8, 27);
+        }
+
+        ctx.restore();
+        p.life--;
+        return p.life > 0;
     });
 }
 
@@ -1342,6 +1497,9 @@ function restartGame() {
     halves = [];
     splashes = [];
     sliceTrail = [];
+    popups = [];
+    comboCount = 0;
+    clearTimeout(comboTimer);
     lastAudioSlicePoint = null;
     ctx.clearRect(0, 0, gameWidth(), gameHeight());
     document.getElementById('scoreValue').textContent = '0';
